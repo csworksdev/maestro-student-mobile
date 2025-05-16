@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/auth_provider.dart';
-import 'package:maestro_client_mobile/screens/editprofile_screen.dart';
+// import 'package:maestro_client_mobile/screens/editprofile_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   @override
@@ -155,19 +155,19 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
             SizedBox(height: 40),
             ElevatedButton.icon(
               onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EditProfileScreen(
-                      fullname: fullname,
-                      nickname: nickname,
-                      dob: dob,
-                      bankAccount: bankAccount,
-                      email: email,
-                      phoneNumber: phoneNumber,
-                    ),
-                  ),
-                );
+                // await Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (_) => EditProfileScreen(
+                //       fullname: fullname,
+                //       nickname: nickname,
+                //       dob: dob,
+                //       bankAccount: bankAccount,
+                //       email: email,
+                //       phoneNumber: phoneNumber,
+                //     ),
+                //   ),
+                // );
                 loadProfileData();
               },
               icon: Icon(Icons.edit, color: Colors.white),

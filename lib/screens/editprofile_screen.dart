@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:provider/provider.dart';
-import 'package:maestro_client_mobile/providers/auth_provider.dart';
+// import 'package:provider/provider.dart';
+// import 'package:maestro_client_mobile/providers/auth_provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  final String fullname;
-  final String nickname;
-  final String dob;
-  final String bankAccount;
-  final String email;
+  final String nama;
+  final String kelas;
+  final String kolam;
   final String phoneNumber;
+  final int index; // Tambahkan index
 
   EditProfileScreen({
-    required this.fullname,
-    required this.nickname,
-    required this.dob,
-    required this.bankAccount,
-    required this.email,
+    required this.nama,
+    required this.kelas,
+    required this.kolam,
     required this.phoneNumber,
+    required this.index,
   });
 
   @override
@@ -26,115 +24,63 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  late TextEditingController fullnameController;
-  late TextEditingController nicknameController;
-  late TextEditingController dobController;
-  late TextEditingController bankAccountController;
-  late TextEditingController emailController;
+  late TextEditingController namaController;
+  late TextEditingController kelasController;
+  late TextEditingController kolamController;
   late TextEditingController phoneController;
+  late String selectedKolam;
 
   @override
   void initState() {
     super.initState();
-    fullnameController = TextEditingController(text: widget.fullname);
-    nicknameController = TextEditingController(text: widget.nickname);
-    dobController = TextEditingController(text: widget.dob);
-    bankAccountController = TextEditingController(text: widget.bankAccount);
-    emailController = TextEditingController(text: widget.email);
-    phoneController = TextEditingController(text: widget.phoneNumber.startsWith('0')
-        ? widget.phoneNumber.replaceFirst('0', '+62')
-        : widget.phoneNumber);
+    namaController = TextEditingController(text: widget.nama);
+    kelasController = TextEditingController(text: widget.kelas);
+    kolamController = TextEditingController(text: widget.kolam);
+    phoneController = TextEditingController(
+      text: widget.phoneNumber.startsWith('0')
+          ? widget.phoneNumber.replaceFirst('0', '+62')
+          : widget.phoneNumber,
+    );
+    // Daftar kolam yang valid
+    final kolamList = [
+      'Kolam Renang Oasis',
+      'Kolam Renang Abadi',
+      'Kolam Renang GBLA',
+    ];
+    // Jika kolam lama tidak ada di daftar, pakai default
+    selectedKolam = kolamList.contains(widget.kolam) ? widget.kolam : kolamList[0];
+    kolamController.text = selectedKolam;
   }
 
   @override
   void dispose() {
-    fullnameController.dispose();
-    nicknameController.dispose();
-    dobController.dispose();
-    bankAccountController.dispose();
-    emailController.dispose();
+    namaController.dispose();
+    kelasController.dispose();
+    kolamController.dispose();
     phoneController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    DateTime initialDate = DateTime.tryParse(dobController.text) ?? DateTime(2000);
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      dobController.text = picked.toIso8601String().substring(0, 10);
-    }
-  }
-
   Future<void> updateProfile() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.userId;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> siswaJsonList = prefs.getStringList('siswaList') ?? [];
+    List<Map<String, String>> siswaList = siswaJsonList
+        .map((siswaJson) => Map<String, String>.from(json.decode(siswaJson)))
+        .toList();
 
-    if (userId == null) {
+    if (widget.index >= 0 && widget.index < siswaList.length) {
+      siswaList[widget.index] = {
+        'fullname': namaController.text,
+        'bankAccount': kelasController.text,
+        'email': selectedKolam, // gunakan selectedKolam
+        'phoneNumber': phoneController.text,
+      };
+      await prefs.setStringList(
+          'siswaList', siswaList.map((siswa) => json.encode(siswa)).toList());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal mendapatkan ID pengguna."),
-        backgroundColor: Colors.red,  
-        ),
+        SnackBar(content: Text("Profil berhasil diperbarui!"), backgroundColor: Colors.green),
       );
-      return;
-    }
-
-    if (!emailController.text.contains('@') || !emailController.text.contains('.')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Email tidak valid!"),
-        backgroundColor: Colors.red,  
-        ),
-      );
-      return;
-    }
-
-    String phone = phoneController.text;
-    if (phone.startsWith('+62')) {
-      phone = '0${phone.substring(3)}';
-    }
-
-    final apiUrl = 'https://api.maestroswim.com/api/trainer/$userId/';
-    final body = {
-      "fullname": fullnameController.text,
-      "nickname": nicknameController.text,
-      "dob": dobController.text,
-      "bank_account": bankAccountController.text,
-      "email": emailController.text,
-      "phone": phone,
-    };
-
-    try {
-      final response = await http.put(
-        Uri.parse(apiUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Profil berhasil diperbarui!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-                Navigator.pop(context);
-      } else {
-        print("Gagal update: ${response.body}");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal memperbarui profil!"),
-          backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      print("Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Terjadi kesalahan.")),
-      );
+      Navigator.pop(context, true); // Kembali dan trigger refresh
     }
   }
 
@@ -179,17 +125,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            buildTextField("Nama Lengkap", fullnameController, Icons.person, isDarkMode),
-            buildTextField("Nama Panggilan", nicknameController, Icons.person_outline, isDarkMode),
-            GestureDetector(
-              onTap: () => _selectDate(context),
-              child: AbsorbPointer(
-                child: buildTextField("Tanggal Lahir", dobController, Icons.calendar_month_outlined, isDarkMode),
+            buildTextField("Nama", namaController, Icons.person, isDarkMode),
+            buildTextField("Kelas", kelasController, Icons.class_, isDarkMode),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: DropdownButtonFormField<String>(
+                value: selectedKolam,
+                decoration: _buildInputDecoration("Kolam", Icons.pool, isDarkMode),
+                items: [
+                  'Kolam Renang Oasis',
+                  'Kolam Renang Abadi',
+                  'Kolam Renang GBLA',
+                ].map((kolam) {
+                  return DropdownMenuItem(
+                    value: kolam,
+                    child: Text(kolam),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedKolam = value!;
+                    kolamController.text = value;
+                  });
+                },
               ),
             ),
-            buildTextField("Rekening Bank", bankAccountController, Icons.account_balance, isDarkMode, TextInputType.number),
-            buildTextField("Email", emailController, Icons.email, isDarkMode, TextInputType.emailAddress),
-            buildTextField("Nomor HP", phoneController, Icons.phone, isDarkMode, TextInputType.phone),
+            buildTextField("No WhatsApp", phoneController, Icons.phone, isDarkMode, TextInputType.phone),
             SizedBox(height: 40),
             ElevatedButton(
               onPressed: () async {

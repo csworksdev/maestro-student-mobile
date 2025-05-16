@@ -15,7 +15,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0, // Hilangkan bayangan
       leading: _buildMenuButton(context, isDarkMode, themeProvider),
       actions: [
-        _buildLogo(context),
+        _buildNotificationIcon(context),
+        _buildMaestroLogo(context),
       ],
     );
   }
@@ -90,11 +91,23 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget _buildLogo(BuildContext context) {
+  Widget _buildNotificationIcon(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(1.0),
+      child: Icon(
+        Icons.notifications_none_rounded,
+        size: 32,
+        color: const Color.fromARGB(255, 255, 255, 255),
+      ),
+    );
+  }
+
+  Widget _buildMaestroLogo(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Image.asset(
         'assets/images/logo_maestro.png',
+        width: 40,
         height: 40,
         fit: BoxFit.contain,
       ),

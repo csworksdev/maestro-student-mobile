@@ -138,7 +138,15 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
           child: Column(
             children: [
               // Tampilkan semua card siswa
-              ...siswaList.map((siswa) => buildInfoCard(isDark, siswa)).toList(),
+              ...siswaList.asMap().entries.map((entry) {
+                int idx = entry.key;
+                Map<String, String> siswa = entry.value;
+                return AnimatedContainer(
+                  duration: Duration(milliseconds: 400 + idx * 50),
+                  curve: Curves.easeOut,
+                  child: buildInfoCard(isDark, siswa),
+                );
+              }).toList(),
               SizedBox(height: 40),
               ElevatedButton.icon(
                 onPressed: () {
@@ -155,7 +163,7 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                   });
                   saveSiswaList(); // <-- Tambahkan ini
                 },
-                icon: Icon(Icons.add_to_photos, color: Colors.white),
+                icon: Icon(Icons.person_add_alt_1, color: Colors.white),
                 label: Text('Tambah Siswa'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isDark ? Colors.orange : Color(0xFF003566),
@@ -175,28 +183,37 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
   Widget buildInfoCard(bool isDark, Map<String, String> siswa) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[850] : const Color.fromARGB(255, 255, 255, 255),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all( // Tambahkan border di sini
-        color: isDark ? Colors.orange : Color.fromARGB(103, 0, 53, 102),
-        width: 1,
-      ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
+// ...existing code...
+decoration: BoxDecoration(
+  gradient: LinearGradient(
+    colors: [
+      Color.fromARGB(255, 255, 255, 255), // biru muda
+      Color.fromARGB(255, 255, 255, 255),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  ),
+  borderRadius: BorderRadius.circular(25),
+  border: Border.all(
+    color: isDark ? Colors.orange : Color.fromARGB(150, 0, 53, 102),
+    width: 2,
+  ),
+  boxShadow: [
+    BoxShadow(
+      color: Color.fromARGB(230, 0, 53, 102),
+      blurRadius: 4,
+      offset: Offset(0, 4),
+    ),
+  ],
+),
+// ...existing code..
       child: Stack(
         children: [
           // Card content
           ClipPath(
             clipper: ReceiptClipper(),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
               child: Column(
                 children: [
                   InfoRow(icon: Icons.person, label: 'Nama', value: siswa['fullname'] ?? '', isDarkMode: isDark),
@@ -225,22 +242,23 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 onSelected: (value) async {
                   if (value == 'edit') {
+                    int index = siswaList.indexOf(siswa);
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => EditProfileScreen(
-                          fullname: siswa['fullname'] ?? '',
-                          nickname: siswa['nickname'] ?? '',
-                          dob: siswa['dob'] ?? '',
-                          bankAccount: siswa['bankAccount'] ?? '',
-                          email: siswa['email'] ?? '',
+                          nama: siswa['fullname'] ?? '',
+                          kelas: siswa['bankAccount'] ?? '',
+                          kolam: siswa['email'] ?? '',
                           phoneNumber: siswa['phoneNumber'] ?? '',
+                          index: index, // Kirim index
                         ),
                       ),
                     );
-                    loadProfileData();
+                    // Setelah kembali dari edit, refresh data siswa
+                    await loadSiswaList();
+                    setState(() {});
                   } else if (value == 'delete') {
-                    // Tampilkan dialog konfirmasi sebelum menghapus
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -293,6 +311,22 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
               ),
             ),
           ),
+          if ((siswa['fullname'] ?? '').isEmpty)
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Baru',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -377,12 +411,12 @@ class InfoRow extends StatelessWidget {
       children: [
         Icon(icon, color: isDarkMode ? Colors.orange : Color(0xFF003566)),
         SizedBox(width: 10),
-        Text('$label :', style: TextStyle(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white70 : Colors.black87)),
+        Text('$label :', style: TextStyle(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white70 : Color.fromARGB(255, 0, 0, 0))),
         SizedBox(width: 10),
         Expanded(
           child: Text(
             value,
-            style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+            style: TextStyle(color: isDarkMode ? const Color.fromARGB(255, 255, 255, 255) : Color.fromARGB(255, 0, 0, 0)),
             overflow: TextOverflow.ellipsis,
           ),
         ),
