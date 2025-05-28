@@ -78,12 +78,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           size: 32,
         ),
         itemBuilder: (context) => [
-          _buildPopupMenuItem(
-            value: 2,
-            icon: isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-            title: isDarkMode ? "Mode Terang" : "Mode Gelap",
-            isDarkMode: isDarkMode,
-          ),
           _buildPopupMenuItem(value: 1, icon: Icons.settings, title: "Setelan", isDarkMode: isDarkMode),
           _buildPopupMenuItem(value: 3, icon: Icons.logout, title: "Keluar", isDarkMode: isDarkMode),
         ],
@@ -94,10 +88,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget _buildNotificationIcon(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(1.0),
-      child: Icon(
-        Icons.notifications_none_rounded,
-        size: 32,
-        color: const Color.fromARGB(255, 255, 255, 255),
+      child: IconButton(
+        icon: Icon(
+          Icons.notifications_none_rounded,
+          size: 32,
+          color: const Color.fromARGB(255, 255, 255, 255),
+        ),
+        onPressed: () {
+          Navigator.of(context).pushNamed('/notifications');
+        },
       ),
     );
   }
@@ -122,15 +121,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }) {
     return PopupMenuItem(
       value: value,
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: value == 3 ? Colors.red : Colors.black, // Ikon berwarna hitam
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: value == 3 ? Colors.red : Colors.black, // Teks berwarna hitam
+      child: Container(
+        width: 120,
+        child: ListTile(
+          leading: Icon(
+            icon,
+            color: value == 3 ? Colors.red : Colors.black,
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              color: value == 3 ? Colors.red : Colors.black,
+            ),
           ),
         ),
       ),

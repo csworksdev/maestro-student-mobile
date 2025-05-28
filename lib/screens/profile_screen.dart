@@ -7,7 +7,7 @@ class ProfileScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Center(child: Text("Profile")),
+          child: Center(child: Text("Coming Soon...", style: TextStyle(fontSize: 24, fontStyle: FontStyle.italic))),
         ),
       ],
     );

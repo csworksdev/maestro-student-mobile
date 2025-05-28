@@ -45,11 +45,11 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
 
   Future<void> loadProfileData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.userId;
+    final parentId = authProvider.userId;
 
-    if (userId == null) return;
+    if (parentId == null) return;
 
-    final String apiUrl = 'https://api.maestroswim.com/api/trainer/$userId/';
+    final String apiUrl = 'https://api.maestroswim.com/api/trainer/$parentId/';
     try {
       final response = await http.get(Uri.parse(apiUrl));
 

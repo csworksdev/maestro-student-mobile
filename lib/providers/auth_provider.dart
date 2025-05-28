@@ -77,11 +77,11 @@ class AuthProvider with ChangeNotifier {
 //   final AuthService _authService = AuthService();
 
 //   bool _isLoggedIn = false;
-//   String? _userId;
+//   String? _parentId;
 //   String? _token;
 
 //   bool get isLoggedIn => _isLoggedIn;
-//   String? get userId => _userId;
+//   String? get parentId => _parentId;
 //   String? get token => _token;
 
 //   AuthProvider() {
@@ -93,12 +93,12 @@ class AuthProvider with ChangeNotifier {
 //       final result = await _authService.login(username, password);
 //       if (result['success']) {
 //         _isLoggedIn = true;
-//         _userId = result['userId'];
+//         _parentId = result['parentId'];
 //         _token = result['token'];
 
 //         SharedPreferences prefs = await SharedPreferences.getInstance();
 //         await prefs.setBool('isLoggedIn', true);
-//         await prefs.setString('userId', _userId!);
+//         await prefs.setString('parendId', _parentId!);
 //         if (_token != null) await prefs.setString('token', _token!);
 
 //         notifyListeners();
@@ -119,7 +119,7 @@ class AuthProvider with ChangeNotifier {
 //     }
 
 //     _isLoggedIn = false;
-//     _userId = null;
+//     _parentId= null;
 //     _token = null;
 
 //     final prefs = await SharedPreferences.getInstance();
@@ -132,12 +132,12 @@ class AuthProvider with ChangeNotifier {
 //     try {
 //       final prefs = await SharedPreferences.getInstance();
 //       _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-//       _userId = prefs.getString('userId');
+//       _parentId = prefs.getString('parentId');
 //       _token = prefs.getString('token');
 //     } catch (e) {
 //       debugPrint("Error reading SharedPreferences: $e");
 //       _isLoggedIn = false;
-//       _userId = null;
+//       _parentId = null;
 //       _token = null;
 //     }
 

@@ -37,8 +37,6 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.5.2
   fl_chart: ^0.70.2
-  firebase_core: ^3.12.0
-  firebase_auth: ^5.5.0
   google_fonts: ^6.2.1
   fluttertoast: ^8.2.12
   http: ^1.3.0
@@ -52,6 +50,8 @@ dependencies:
   upgrader: ^11.3.1
   package_info_plus: ^8.3.0
   carousel_slider: ^5.0.0
+  flutter_animate: ^4.5.0
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -94,6 +94,20 @@ flutter:
     - assets/images/private1.jpg
     - assets/images/private2.jpg
     - assets/images/grup.png
+    - assets/images/badge1.png
+    - assets/images/facebook.logo.png
+    - assets/images/tiktok.logo.png
+    - assets/images/instagram.logo.png
+    - assets/images/youtube.logo.png
+    - assets/images/masterhydro.png
+    - assets/images/hydro1.png
+    - assets/images/hydro2.png
+    - assets/images/hydro3.png
+    - assets/images/hydro4.png
+    - assets/images/hydro5.png
+    - assets/images/hydro6.png
+    - assets/images/hydro7.png
+    - assets/images/katalog.jpg
 
 
 
