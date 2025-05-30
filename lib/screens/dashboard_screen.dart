@@ -196,6 +196,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     // New Elegant Card Wrapper
                     Card(
+                      
                       color: cardBgColor,
                       child: Padding(
                         padding: EdgeInsets.all(size.width * 0.02),
@@ -221,9 +222,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       onTap: () {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (context) => AccountScreen()), // Navigate to DataSiswaPage
+                                          MaterialPageRoute(
+                                            builder: (_) => const DataSiswaPage(),
+                                          ),
                                         );
-                                      },
+                                      }
                                     ),
                                     SizedBox(width: size.width * 0.002),
                                     buildCategoryCard(

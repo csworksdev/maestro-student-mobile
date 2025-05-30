@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'account_screen.dart';
 import 'privacysecurity_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -8,10 +7,10 @@ class SettingsScreen extends StatelessWidget {
       icon: Icons.person,
       title: 'Akun',
       onTap: (context) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => AccountScreen()),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(builder: (context) => AccountScreen()),
+        // );
       },
     ),
     _SettingItem(

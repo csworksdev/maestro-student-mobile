@@ -1,34 +1,31 @@
 class Student {
-  final String? fullname;
-  final String? nickname;
-  final String? gender;
-  final String? parent;
-  final String? phone;
-  final String? address;
-  final String? dob;
-  final String? pob;
-  final String? parentId;
-  final String? branch;
-  final String? username;
-  final String? password;
+  final String studentId;
+  final String fullname;
+  final String nickname;
+  final String gender;
+  final String parent;
+  final String phone;
+  final String address;
+  final String dob;
+  final String pob;
+  final String branchName;
 
   Student({
-    this.fullname,
-    this.nickname,
-    this.gender,
-    this.parent,
-    this.phone,
-    this.address,
-    this.dob,
-    this.pob,
-    this.parentId,
-    this.branch,
-    this.username,
-    this.password,
+    required this.studentId,
+    required this.fullname,
+    required this.nickname,
+    required this.gender,
+    required this.parent,
+    required this.phone,
+    required this.address,
+    required this.dob,
+    required this.pob,
+    required this.branchName,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
     return Student(
+      studentId: json['student_id'],
       fullname: json['fullname'],
       nickname: json['nickname'],
       gender: json['gender'],
@@ -37,27 +34,7 @@ class Student {
       address: json['address'],
       dob: json['dob'],
       pob: json['pob'],
-      parentId: json['parent_id'],
-      branch: json['branch'],
-      username: json['username'],
-      password: json['password'],
+      branchName: json['branch_name'],
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'fullname': fullname,
-      'nickname': nickname,
-      'gender': gender,
-      'parent': parent,
-      'phone': phone,
-      'address': address,
-      'dob': dob,
-      'pob': pob,
-      'parent_id': parentId,
-      'branch': branch,
-      'username': username,
-      'password': password,
-    };
   }
 }

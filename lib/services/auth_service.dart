@@ -10,17 +10,20 @@ class AuthService {
   /// Melakukan login ke API dan menyimpan token serta user ID
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      final url = Uri.parse('https://api.maestroswim.com/api/student/parent/');
+      final url = Uri.parse('https://api.maestroswim.com/auth/users/login/');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
 
+      debugPrint('API LOGIN status: \\${response.statusCode}');
+      debugPrint('API LOGIN body: \\${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
-        final userId = data['data']['parent_id'].toString();
+        final userId = data['data']['user_id'].toString();
 
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('username', username);
@@ -38,6 +41,7 @@ class AuthService {
       }
     } catch (e) {
       debugPrint("Login error: $e");
+      debugPrint("Login error (exception): $e");
       return {'success': false};
     }
   }
