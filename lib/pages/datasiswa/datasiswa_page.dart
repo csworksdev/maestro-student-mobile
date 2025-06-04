@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'editdatasiswa_screen.dart';
+import 'package:maestro_client_mobile/pages/datasiswa/detaildatasiswa_screen.dart';
 
 class DataSiswaPage extends StatefulWidget {
   const DataSiswaPage({super.key});
@@ -27,27 +27,39 @@ class _DataSiswaPageState extends State<DataSiswaPage> {
     fetchAllStudents();
   }
 
-  Future<void> fetchAllStudents() async {
-    final url = Uri.parse("https://api.maestroswim.com/api/student/");
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+Future<void> fetchAllStudents() async {
+  final url = Uri.parse("https://api.maestroswim.com/api/student/");
+  try {
+    debugPrint("Memulai fetch data siswa...");
+    final response = await http.get(url);
+
+    debugPrint("Status code: ${response.statusCode}");
+    debugPrint("Response body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data['results'] != null && data['results'] is List) {
         final results = List<Map<String, dynamic>>.from(data['results']);
         setState(() {
           allStudents = results;
           isLoading = false;
         });
+        debugPrint("Data siswa berhasil dimuat. Jumlah data: ${allStudents.length}");
       } else {
-        throw Exception("Gagal memuat data siswa");
+        debugPrint("Data 'results' tidak ditemukan atau bukan List.");
       }
-    } catch (e) {
-      debugPrint("Error: $e");
-      setState(() {
-        isLoading = false;
-      });
+    } else {
+      debugPrint("Gagal memuat data siswa. Status: ${response.statusCode}");
+      throw Exception("Gagal memuat data siswa");
     }
+  } catch (e) {
+    debugPrint("Terjadi kesalahan saat mengambil data siswa: $e");
+    setState(() {
+      isLoading = false;
+    });
   }
+}
 
   Widget buildStudentCard(Map<String, dynamic> student) {
     return Card(
@@ -143,8 +155,7 @@ class _DataSiswaPageState extends State<DataSiswaPage> {
         title: Text(
           'Data Siswa',
           style: GoogleFonts.poppins(
-            fontSize: scaleWidth(18),
-            fontWeight: FontWeight.w600,
+            fontSize: scaleWidth(20),
             color: Colors.black,
           ),
         ),
@@ -153,39 +164,46 @@ class _DataSiswaPageState extends State<DataSiswaPage> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : allStudents.isEmpty
-              ? Center(
-                  child: Text(
-                    "Tidak ada data siswa",
-                    style: GoogleFonts.poppins(fontSize: scaleWidth(14)),
-                  ),
-                )
-              : Padding(
-                  padding: EdgeInsets.all(scaleWidth(16)),
-                  child: ListView.builder(
-                    itemCount: allStudents.length,
-                    itemBuilder: (context, index) => GestureDetector(
-                      onTap: () async {
-                        final updatedStudent = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => EditDataSiswaScreen(studentData: allStudents[index]),
-                          ),
-                        );
-                        if (updatedStudent != null) {
-                          setState(() {
-                            final i = allStudents.indexWhere((s) =>
-                                s['student_id'] == updatedStudent['student_id']);
-                            if (i != -1) allStudents[i] = updatedStudent;
-                          });
-                        }
-                      },
-                      child: buildStudentCard(allStudents[index]),
-                    ),
-                  ),
+body: isLoading
+    ? const Center(child: CircularProgressIndicator())
+    : allStudents.isEmpty
+        ? Center(
+            child: Text(
+              "Tidak ada data siswa",
+              style: GoogleFonts.poppins(fontSize: scaleWidth(14)),
+            ),
+          )
+        : RefreshIndicator(
+            onRefresh: fetchAllStudents,
+            child: Padding(
+              padding: EdgeInsets.all(scaleWidth(16)),
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: allStudents.length,
+                itemBuilder: (context, index) => GestureDetector(
+                  onTap: () async {
+                    final updatedStudent = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DetailDataSiswaScreen(
+                          studentData: allStudents[index],
+                        ),
+                      ),
+                    );
+                    if (updatedStudent != null) {
+                      setState(() {
+                        final i = allStudents.indexWhere((s) =>
+                            s['student_id'] ==
+                            updatedStudent['student_id']);
+                        if (i != -1) allStudents[i] = updatedStudent;
+                      });
+                    }
+                  },
+                  child: buildStudentCard(allStudents[index]),
                 ),
+              ),
+            ),
+          ),
     );
   }
 }

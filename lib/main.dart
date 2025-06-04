@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -13,7 +14,6 @@ import 'package:maestro_client_mobile/pages/login_page.dart';
 
 import 'package:maestro_client_mobile/widgets/app_bar.dart';
 import 'package:maestro_client_mobile/widgets/bottom_nav_bar.dart' as CustomWidgets;
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +48,16 @@ class _MyAppState extends State<MyApp> {
           themeMode: themeProvider.themeMode,
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
+          locale: const Locale('id'), // Bahasa Indonesia
+          supportedLocales: const [
+            Locale('id'),
+            Locale('en'),
+          ],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           home: authProvider.isLoggedIn ? MainScreen() : LoginPage(),
           routes: {
             '/MainScreen': (context) => MainScreen(),
@@ -66,7 +76,6 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-
   @override
   Widget build(BuildContext context) {
     final navProvider = Provider.of<NavigationProvider>(context);
