@@ -20,7 +20,7 @@ class AuthProvider with ChangeNotifier {
   Future<bool> login(String username, String password) async {
     try {
       final result = await _authService.login(username, password);
-      debugPrint('AuthProvider login result: \\${result.toString()}');
+
       if (result['success']) {
         _isLoggedIn = true;
         _userId = result['userId'];
@@ -35,7 +35,7 @@ class AuthProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      debugPrint("Login error: $e");
+      // Handle error silently
     }
 
     return false;
@@ -46,7 +46,7 @@ class AuthProvider with ChangeNotifier {
     try {
       await _authService.logout(); 
     } catch (e) {
-      debugPrint("Logout error (offline mode?): $e");
+      // Handle error silently
     }
 
     _isLoggedIn = false;
@@ -66,7 +66,6 @@ class AuthProvider with ChangeNotifier {
       _userId = prefs.getString('userId');
       _token = prefs.getString('token');
     } catch (e) {
-      debugPrint("Error reading SharedPreferences: $e");
       _isLoggedIn = false;
       _userId = null;
       _token = null;

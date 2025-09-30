@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/auth_provider.dart';
+import 'package:maestro_client_mobile/services/notification_service.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -20,21 +21,9 @@ class _LoginPageState extends State<LoginPage> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: Stack(
         children: [
-          ClipPath(
-            clipper: WaveClipper(),
-            child: Container(
-              height: screenHeight * 0.46,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [const Color(0xEF003566), const Color(0xEF003566)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ),
           Center(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
@@ -204,6 +193,20 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     if (success) {
+      // Setelah login berhasil, dapatkan dan simpan FCM token ke server
+      final notificationService = NotificationService();
+      final fcmToken = await notificationService.getToken();
+      
+      // Tampilkan token auth di debug console
+      print('====== AUTH TOKEN ======');
+      print(authProvider.token);
+      print('========================');
+      
+      // Tampilkan FCM token di debug console
+      print('====== FCM TOKEN ======');
+      print(fcmToken);
+      print('=======================');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Login berhasil!'),

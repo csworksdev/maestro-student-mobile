@@ -59,6 +59,10 @@ class MainBottomNavBar extends StatelessWidget {
             icon: Icon(Icons.person_outline),
             label: 'Profile',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_rounded),
+            label: 'Menu',
+          ),
         ],
       ),
     );

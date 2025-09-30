@@ -1,97 +1,22 @@
 {
   "project_info": {
-    "project_number": "125819325717",
-    "project_id": "login-maestro-fix",
-    "storage_bucket": "login-maestro-fix.firebasestorage.app"
-  },
+    "project_number": "988318550591",
+    "project_id": "maestro-front",
+    "storage_bucket": "maestro-front.firebasestorage.app"
+},
+
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:125819325717:android:b126df4a657f344474ed1c",
+        "mobilesdk_app_id": "1:232446227609:android:e93ec825cc066b3f4df408",
         "android_client_info": {
-          "package_name": "com.example.maestro_swim"
+          "package_name": "com.example.maestro_client_mobile"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD4aql5Y_y3c2YKF7QbJR1jmXeegLijjhY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:125819325717:android:411582633e5286ab74ed1c",
-        "android_client_info": {
-          "package_name": "com.example.maestroswim_mobile_client"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyD4aql5Y_y3c2YKF7QbJR1jmXeegLijjhY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:125819325717:android:1f1b8df5445792d074ed1c",
-        "android_client_info": {
-          "package_name": "com.example.maestroswim_mobile_coach"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyD4aql5Y_y3c2YKF7QbJR1jmXeegLijjhY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:125819325717:android:b9d8a7e66cb0a46674ed1c",
-        "android_client_info": {
-          "package_name": "com.example.movie_app"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyD4aql5Y_y3c2YKF7QbJR1jmXeegLijjhY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:125819325717:android:17cebb3aaed37a9274ed1c",
-        "android_client_info": {
-          "package_name": "id.maestro.clientapp"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyD4aql5Y_y3c2YKF7QbJR1jmXeegLijjhY"
+          "current_key": "AIzaSyC0UIpjh5V3OBJh4WD5GTFwb6Ibes4-vAA"
         }
       ],
       "services": {
