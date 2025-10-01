@@ -1,161 +1,174 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/theme_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+class ProgressScreen extends StatefulWidget {
+  const ProgressScreen({super.key});
 
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
+  _ProgressScreenState createState() => _ProgressScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  List<double> incomeData = [50, 80, 60, 100, 90, 70, 110];
-  List<double> expenseData = [30, 60, 50, 80, 70, 55, 90];
-  List<double> pieData = [42, 18, 24, 16];
-  late Timer _timer;
-  String selectedChart = "income";
-
-  @override
-  void initState() {
-    super.initState();
-    _startAutoUpdate();
-  }
-
-  void _startAutoUpdate() {
-    _timer = Timer.periodic(Duration(seconds: 3), (timer) {
-      setState(() {
-        incomeData = incomeData.map((e) => Random().nextInt(100) + 20.0).toList();
-        expenseData = expenseData.map((e) => Random().nextInt(80) + 10.0).toList();
-        double total = 100.0;
-        List<double> newPieData = List.generate(4, (index) => Random().nextInt(30) + 10.0);
-        double sum = newPieData.reduce((a, b) => a + b);
-        pieData = newPieData.map((e) => (e / sum) * total).toList();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
+class _ProgressScreenState extends State<ProgressScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     bool isDarkMode = themeProvider.isDarkMode;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Coach Earning",
-            style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic, color: isDarkMode ? Colors.white : Colors.black),
-          ),
-          SizedBox(height: 4),
-          Text(
-            "Rp 769.824.050",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black),
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      selectedChart = "income";
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedChart == "income" ? Colors.blue : Colors.grey,
-                  ),
-                  child: Text("Income", style: TextStyle(color: Colors.white)),
+    return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF0F0F0F) : Colors.white,
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDarkMode
+                      ? [Color(0xFF232526), Color(0xFF414345)]
+                      : [Color(0xFF003566), Color(0xFF00509E)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      selectedChart = "expense";
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedChart == "expense" ? Colors.blue : Colors.grey,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
                   ),
-                  child: Text("Expense", style: TextStyle(color: Colors.white)),
-                ),
+                ],
               ),
-            ],
-          ),
-          SizedBox(height: 24),
-          _buildCard(title: "Statistics", child: selectedChart == "income" ? _buildBarChart(incomeData, isDarkMode) : _buildLineChart(expenseData, isDarkMode), isDarkMode: isDarkMode),
-          SizedBox(height: 24),
-          _buildCard(title: "Transaction", child: _buildPieChart(isDarkMode), isDarkMode: isDarkMode),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCard({required String title, required Widget child, required bool isDarkMode}) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: isDarkMode
-            ? LinearGradient(colors: [Colors.grey[800]!, Colors.grey[700]!])
-            : LinearGradient(colors: [const Color.fromARGB(255, 21, 27, 30), const Color.fromARGB(255, 76, 104, 117)]),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: Offset(0, 4))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-          SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBarChart(List<double> data, bool isDarkMode) {
-    return SizedBox(
-      height: 200,
-      child: BarChart(
-        BarChartData(
-          barGroups: List.generate(data.length, (index) => _buildBarGroup(index, data[index])),
-          borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
-            bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, getTitlesWidget: (double value, _) => Text('D${value.toInt()}'))),
-          ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.trending_up,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Progress Latihan',
+                        style: GoogleFonts.nunito(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Pantau perkembangan kemampuan renang Anda',
+                    style: GoogleFonts.nunito(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            SizedBox(height: 24),
+            
+            // Progress Overview
+            _buildProgressOverview(isDarkMode: isDarkMode),
+            
+            SizedBox(height: 16),
+            
+            // Skills Progress
+            _buildSkillsProgress(isDarkMode: isDarkMode),
+            
+            SizedBox(height: 16),
+            
+            // Recent Achievements
+            _buildRecentAchievements(isDarkMode: isDarkMode),
+            
+            SizedBox(height: 16),
+            
+            // Goals
+            _buildGoals(isDarkMode: isDarkMode),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLineChart(List<double> data, bool isDarkMode) {
-    return SizedBox(
-      height: 200,
-      child: LineChart(
-        LineChartData(
-          lineBarsData: [
-            LineChartBarData(
-              spots: List.generate(data.length, (index) => FlSpot(index.toDouble(), data[index])),
-              isCurved: true,
-              gradient: LinearGradient(colors: [Colors.blueAccent, Colors.cyan]),
-              barWidth: 3,
-              dotData: FlDotData(show: true, getDotPainter: (spot, percent, barData, index) {
-                return FlDotCirclePainter(radius: 5, color: Colors.red, strokeColor: Colors.white, strokeWidth: 2);
-              }),
-              belowBarData: BarAreaData(show: true, gradient: LinearGradient(colors: [Colors.blueAccent.withOpacity(0.5), Colors.transparent])),
+  Widget _buildProgressOverview({required bool isDarkMode}) {
+    return Card(
+      elevation: 2,
+      color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ringkasan Progress',
+              style: GoogleFonts.nunito(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Color(0xFF003566),
+              ),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Total Latihan',
+                    value: '24',
+                    subtitle: 'pertemuan',
+                    icon: Icons.pool,
+                    isDarkMode: isDarkMode,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Durasi',
+                    value: '24',
+                    subtitle: 'jam',
+                    icon: Icons.timer,
+                    isDarkMode: isDarkMode,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Level',
+                    value: 'Intermediate',
+                    subtitle: 'current',
+                    icon: Icons.star,
+                    isDarkMode: isDarkMode,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    title: 'Streak',
+                    value: '7',
+                    subtitle: 'hari',
+                    icon: Icons.local_fire_department,
+                    isDarkMode: isDarkMode,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -163,42 +176,389 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildPieChart(bool isDarkMode) {
-    return SizedBox(
-      height: 200,
-      child: PieChart(
-        PieChartData(
-          sections: List.generate(pieData.length, (index) {
-            final List<Color> colors = [Colors.blue, Colors.red, Colors.green, Colors.orange];
-            return PieChartSectionData(
-              value: pieData[index],
-              title: '${pieData[index].toStringAsFixed(1)}%',
-              color: colors[index % colors.length],
-              radius: 50,
-              titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-              showTitle: true,
-              badgeWidget: Icon(Icons.star, color: Colors.white, size: 12),
-            );
-          }),
-          sectionsSpace: 4,
-          centerSpaceRadius: 40,
-          borderData: FlBorderData(show: false),
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required bool isDarkMode,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Color(0xFF2A2A2A) : Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Color(0xFF003566).withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: Color(0xFF003566),
+            size: 24,
+          ),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.nunito(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Color(0xFF003566),
+            ),
+          ),
+          Text(
+            title,
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: isDarkMode ? Colors.white60 : Colors.grey[600],
+            ),
+          ),
+          Text(
+            subtitle,
+            style: GoogleFonts.nunito(
+              fontSize: 10,
+              color: isDarkMode ? Colors.white : Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkillsProgress({required bool isDarkMode}) {
+    return Card(
+      elevation: 2,
+      color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Kemampuan Renang',
+              style: GoogleFonts.nunito(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Color(0xFF003566),
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildSkillItem(
+              skill: 'Freestyle',
+              progress: 0.8,
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 12),
+            _buildSkillItem(
+              skill: 'Backstroke',
+              progress: 0.6,
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 12),
+            _buildSkillItem(
+              skill: 'Breaststroke',
+              progress: 0.4,
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 12),
+            _buildSkillItem(
+              skill: 'Butterfly',
+              progress: 0.2,
+              isDarkMode: isDarkMode,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  BarChartGroupData _buildBarGroup(int index, double value) {
-    return BarChartGroupData(
-      x: index,
-      barRods: [
-        BarChartRodData(
-          toY: value,
-          gradient: LinearGradient(colors: [const Color.fromARGB(255, 240, 153, 255), const Color.fromARGB(255, 0, 153, 255)]),
-          width: 14,
-          borderRadius: BorderRadius.circular(6),
+  Widget _buildSkillItem({
+    required String skill,
+    required double progress,
+    required bool isDarkMode,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              skill,
+              style: GoogleFonts.nunito(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.white : Color(0xFF003566),
+              ),
+            ),
+            Text(
+              '${(progress * 100).toInt()}%',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF003566),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: progress,
+          backgroundColor: isDarkMode ? Color(0xFF2A2A2A) : Color(0xFFE0E0E0),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF003566)),
+          minHeight: 8,
         ),
       ],
+    );
+  }
+
+  Widget _buildRecentAchievements({required bool isDarkMode}) {
+    return Card(
+      elevation: 2,
+      color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.emoji_events,
+                  color: Color(0xFF003566),
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Pencapaian Terbaru',
+                  style: GoogleFonts.nunito(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Color(0xFF003566),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            _buildAchievementItem(
+              title: 'Freestyle Master',
+              description: 'Menyelesaikan 10 putaran tanpa berhenti',
+              date: '2 hari yang lalu',
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 12),
+            _buildAchievementItem(
+              title: 'Consistency Champion',
+              description: 'Latihan selama 7 hari berturut-turut',
+              date: '1 minggu yang lalu',
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 12),
+            _buildAchievementItem(
+              title: 'Speed Demon',
+              description: 'Mencapai waktu terbaik untuk 50m',
+              date: '2 minggu yang lalu',
+              isDarkMode: isDarkMode,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementItem({
+    required String title,
+    required String description,
+    required String date,
+    required bool isDarkMode,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Color(0xFF2A2A2A) : Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.amber.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              Icons.emoji_events,
+              color: Colors.amber,
+              size: 24,
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Color(0xFF003566),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  description,
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.white60 : Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  date,
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.white : Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoals({required bool isDarkMode}) {
+    return Card(
+      elevation: 2,
+      color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.flag,
+                  color: Color(0xFF003566),
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Target & Tujuan',
+                  style: GoogleFonts.nunito(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Color(0xFF003566),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            _buildGoalItem(
+              title: 'Menguasai 4 Gaya Renang',
+              progress: 0.5,
+              deadline: '3 bulan lagi',
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 12),
+            _buildGoalItem(
+              title: 'Mencapai Level Advanced',
+              progress: 0.3,
+              deadline: '6 bulan lagi',
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 12),
+            _buildGoalItem(
+              title: 'Mengikuti Kompetisi',
+              progress: 0.1,
+              deadline: '1 tahun lagi',
+              isDarkMode: isDarkMode,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoalItem({
+    required String title,
+    required double progress,
+    required String deadline,
+    required bool isDarkMode,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Color(0xFF2A2A2A) : Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Color(0xFF003566).withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Color(0xFF003566),
+                  ),
+                ),
+              ),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF003566),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: isDarkMode ? Color(0xFF2A2A2A) : Color(0xFFE0E0E0),
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF003566)),
+            minHeight: 6,
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Target: $deadline',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: isDarkMode ? Colors.white : Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -107,4 +107,53 @@ class AuthService {
     await prefs.clear();
     await _storage.deleteAll();
   }
+
+  /// Mengirim OTP ke nomor WhatsApp berdasarkan username
+  Future<bool> sendOtp({required String username, required String whatsappNumber}) async {
+    try {
+      final url = Uri.parse('https://api.maestroswim.com/auth/users/send-otp/');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'whatsapp_number': whatsappNumber,
+        }),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Reset password menggunakan OTP
+  Future<bool> resetPasswordWithOtp({
+    required String otp,
+    required String username,
+    required String newPassword,
+  }) async {
+    try {
+      final url = Uri.parse('https://api.maestroswim.com/auth/users/reset-password/');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'otp': otp,
+          'username': username,
+          'new_password': newPassword,
+        }),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
 }

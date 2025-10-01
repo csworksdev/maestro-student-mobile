@@ -102,13 +102,6 @@ class _NotificationScreenState extends State<NotificationScreen>
       appBar: AppBar(
         elevation: 0,
         backgroundColor: isDarkMode ? const Color(0xFF0F0F0F) : const Color(0xFFFAFAFA),
-        title: Text(
-          'Notifikasi',
-          style: GoogleFonts.nunito(
-            color: isDarkMode ? Colors.white : Colors.black,
-            fontSize: 22,
-          ),
-        ),
         centerTitle: true,
         actions: [
           if (notifications.isNotEmpty) ...[
@@ -338,6 +331,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 14,
+                  fontStyle: FontStyle.italic,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   height: 1.5,
                 ),

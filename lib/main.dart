@@ -12,11 +12,12 @@ import 'package:maestro_client_mobile/providers/theme_provider.dart';
 import 'package:maestro_client_mobile/providers/notification_provider.dart';
 
 import 'package:maestro_client_mobile/screens/dashboard_screen.dart';
-import 'package:maestro_client_mobile/screens/profile_screen.dart';
-import 'package:maestro_client_mobile/screens/settings_screen.dart';
-import 'package:maestro_client_mobile/screens/menu_screen.dart';
+import 'package:maestro_client_mobile/screens/schedule_screen.dart';
+import 'package:maestro_client_mobile/screens/progress_screen.dart';
+import 'package:maestro_client_mobile/screens/package_screen.dart';
 import 'package:maestro_client_mobile/screens/notification_screen.dart';
 import 'package:maestro_client_mobile/pages/login_page.dart';
+import 'package:maestro_client_mobile/screens/settings_screen.dart';
 
 import 'package:maestro_client_mobile/widgets/app_bar.dart';
 import 'package:maestro_client_mobile/widgets/bottom_nav_bar.dart' as CustomWidgets;
@@ -27,6 +28,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:maestro_client_mobile/models/notification.dart';
 import 'package:maestro_client_mobile/services/notification_service.dart';
 import 'package:maestro_client_mobile/services/api_service.dart';
+import 'package:maestro_client_mobile/theme/app_theme.dart';
 
 @pragma("vm:entry-point")
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -90,28 +92,8 @@ class _MyAppState extends State<MyApp> {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           themeMode: themeProvider.themeMode,
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: const Color(0xFF0F0F0F),
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF0F0F0F),
-              foregroundColor: Colors.white,
-              elevation: 0,
-            ),
-            cardColor: const Color(0xFF1A1A1A),
-            dividerColor: const Color(0xFF2A2A2A),
-            primaryColor: const Color.fromARGB(240, 0, 53, 102),
-            colorScheme: const ColorScheme.dark(
-              primary: Color.fromARGB(240, 0, 53, 102),
-              secondary: Color.fromARGB(240, 0, 53, 102),
-              surface: Color(0xFF1A1A1A),
-              background: Color(0xFF0F0F0F),
-              onPrimary: Colors.white,
-              onSecondary: Colors.white,
-              onSurface: Colors.white,
-              onBackground: Colors.white,
-            ),
-          ),
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
           locale: const Locale('id'),
           supportedLocales: const [
             Locale('id'),
@@ -315,9 +297,10 @@ class _MainScreenState extends State<MainScreen> {
 
     final List<Widget> pages = [
       DashboardScreen(),
-      ProfileScreen(),
-      ProfileScreen(),
-      MenuScreen(),
+      ScheduleScreen(),
+      ProgressScreen(),
+      PackageScreen(),
+      NotificationScreen(),
     ];
 
     return Scaffold(

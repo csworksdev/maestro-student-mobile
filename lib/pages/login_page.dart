@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/auth_provider.dart';
 import 'package:maestro_client_mobile/services/notification_service.dart';
+import 'package:maestro_client_mobile/pages/forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -75,7 +76,6 @@ class _LoginPageState extends State<LoginPage> {
                             : ElevatedButton(
                                 onPressed: _login,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xEF003566),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(50),
                                   ),
@@ -93,6 +93,23 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                               ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _forgotPassword,
+                              child: Text(
+                                "Lupa Password?",
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.035,
+                                  color: Color.fromARGB(209, 0, 40, 78),
+                                  fontWeight: FontWeight.w500,
+                                  fontStyle: FontStyle.italic,
+                                  decoration: TextDecoration.underline, // Tambahkan garis bawah
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -222,6 +239,15 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     }
+  }
+
+    void _forgotPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ForgotPasswordPage(),
+      ),
+    );
   }
 }
 

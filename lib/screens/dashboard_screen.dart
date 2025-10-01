@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:maestro_client_mobile/pages/datasiswa/datasiswa_page.dart';
-import 'package:maestro_client_mobile/pages/jadwalsiswa/jadwal_siswa.dart';
 import 'package:maestro_client_mobile/pages/masterhydro.dart';
-import 'package:maestro_client_mobile/pages/ordersiswa/orderhistory_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:maestro_client_mobile/theme/app_theme.dart';
 import 'dart:ui';
 import 'dart:async';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -23,17 +21,25 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _onRefresh() async {
     await Future.delayed(const Duration(seconds: 1));
+  }
+
+  Widget _wrapWhite({required Size size, required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: child,
+    );
   }
 
   // Tambahkan fungsi untuk membuka WhatsApp
@@ -52,11 +58,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? Color(0xFF222831) : Color(0xEF003566);
-    final secondaryColor = isDark ? Colors.white : Color(0xFFFFFFFF);
-    final cardBgColor = isDark ? Color(0xFF31363b) : Colors.white;
-    final searchBarColor = isDark ? Color(0xFF23272F) : Color(0xFFFFFFFF);
-    final searchHintColor = isDark ? Colors.blueGrey[200] : Colors.blueGrey[300];
+    final primaryColor = Theme.of(context).colorScheme.primary; // navy
+    final onPrimaryText = Theme.of(context).colorScheme.onPrimary; // white
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -66,12 +69,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ClipPath(
             clipper: WaveClipper(),
             child: Container(
-              height: size.height * 0.60,
+              height: size.height * 0.30,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isDark
-                      ? [Color(0xFF232526), Color(0xFF414345)]
-                      : [Color(0xFF003566),Color(0xFF00509E)],
+                      ? [const Color(0xFF232526), const Color(0xFF414345)]
+                      : [AppColors.orange, AppColors.orange.withOpacity(0.92)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -103,7 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             style: GoogleFonts.nunito(
                               fontSize: size.width * 0.065,
                               fontWeight: FontWeight.bold,
-                              color: secondaryColor,
+                              color: onPrimaryText,
                             ),
                           ),
                           Text(
@@ -112,7 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               fontSize: size.width * 0.040,
                               fontStyle: FontStyle.italic,
                               fontWeight: FontWeight.normal,
-                              color: secondaryColor,
+                              color: onPrimaryText,
                             ),
                           ),
                         ],
@@ -120,151 +123,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     SizedBox(height: size.height * 0.02),
 
-                    // Search Bar
-                    AnimatedContainer(
-                      duration: Duration(milliseconds: 350),
-                      curve: Curves.easeOutCubic,
-                      margin: EdgeInsets.only(bottom: size.height * 0.02),
-                      padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
-                      decoration: BoxDecoration(
-                        color: searchBarColor,
-                        borderRadius: BorderRadius.circular(38),
-                        boxShadow: [
-                          if (!isDark)
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          AnimatedSwitcher(
-                            duration: Duration(milliseconds: 300),
-                            transitionBuilder: (child, anim) => RotationTransition(turns: anim, child: child),
-                            child: _isSearching && _searchController.text.isNotEmpty
-                                ? GestureDetector(
-                                    key: ValueKey('close'),
-                                    onTap: () {
-                                      _searchController.clear();
-                                      setState(() {
-                                        _isSearching = false;
-                                      });
-                                    },
-                                    child: Icon(Icons.close, color: primaryColor, size: size.width * 0.06),
-                                  )
-                                : Icon(Icons.search, key: ValueKey('search'), color: Color(0xEF003566)),
-                          ),
-                          SizedBox(width: size.width * 0.02),
-                          Expanded(
-                            child: FocusScope(
-                              child: Focus(
-                                onFocusChange: (hasFocus) {
-                                  setState(() {
-                                    _isSearching = hasFocus || _searchController.text.isNotEmpty;
-                                  });
-                                },
-                                child: TextField(
-                                  controller: _searchController,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _isSearching = val.isNotEmpty;
-                                    });
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText: "Search...",
-                                    border: InputBorder.none,
-                                    hintStyle: TextStyle(
-                                      color: searchHintColor,
-                                      fontSize: size.width * 0.042,
-                                      fontStyle: FontStyle.italic,
-                                      fontFamily: GoogleFonts.poppins().fontFamily,
-                                    ),
-                                  ),
-                                  style: GoogleFonts.nunito(
-                                    fontSize: size.width * 0.042,
-                                  ),
-                                  cursorColor: Color(0xEF003566),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Pengumuman Singkat / Highlight (dipindah di atas search bar)
+                    _buildAnnouncementCard(size: size, isDark: isDark),
 
-                    // New Elegant Card Wrapper
-                    Card(
-                      
-                      color: cardBgColor,
-                      child: Padding(
-                        padding: EdgeInsets.all(size.width * 0.02),
-                        child: Column(
+                    SizedBox(height: size.height * 0.015),
+
+                    // Dashboard Content
+                    Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Category Cards in a 2x2 grid
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: size.width * 0.001),
-                              child: SizedBox(
-                                height: size.height * 0.18, // Sesuaikan tinggi card
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: EdgeInsets.symmetric(horizontal: size.width * 0.01),
-                                  children: [
-                                    buildCategoryCard(
-                                      icon: Icons.person,
-                                      title: "Data Siswa",
-                                      color: const Color(0xEF003566),
-                                      gradient: LinearGradient(colors: [Color(0xFF003566), Color(0xFF00509E)]),
-                                      iconGradient: LinearGradient(colors: [Color(0xFF00509E), Color(0xFF003566)]),                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => const DataSiswaPage(),
-                                          ),
-                                        );
-                                      }
-                                    ),
-                                    SizedBox(width: size.width * 0.002),
-                                    buildCategoryCard(
-                                      icon: Icons.history,
-                                      title: "Order History",
-                                      color: const Color(0xEF003566),
-                                      gradient: LinearGradient(colors: [Color(0xFF003566), Color(0xFF00509E)]),
-                                      iconGradient: LinearGradient(colors: [Color(0xFF00509E), Color(0xFF003566)]),                                       onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (context) => (OrderHistoryPage())), // Navigate to DataSiswaPage
-                                        );
-                                      },
-                                    ),
-                                    SizedBox(width: size.width * 0.002),
-                                    buildCategoryCard(
-                                      icon: Icons.schedule,
-                                      title: "Jadwal",
-                                      color: const Color(0xEF003566),
-                                      gradient: LinearGradient(colors: [Color(0xFF003566), Color(0xFF00509E)]),
-                                      iconGradient: LinearGradient(colors: [Color(0xFF00509E), Color(0xFF003566)]),                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (context) => (JadwalSiswaPage())), // Navigate to DataSiswaPage
-                                        );
-                                      },
-                                    ),
-                                    SizedBox(width: size.width * 0.002),
-                                    buildCategoryCard(
-                                      icon: Icons.show_chart,
-                                      title: "Progres",
-                                      color: const Color(0xEF003566),
-                                      gradient: LinearGradient(colors: [Color(0xFF003566), Color(0xFF00509E)]),
-                                      iconGradient: LinearGradient(colors: [Color(0xFF00509E), Color(0xFF003566)]),                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            SizedBox(height: size.height * 0.02),
+                        
+                        // Ringkasan Profil Siswa/Orangtua
+                        _buildProfileSummaryCard(size: size, isDark: isDark),
+                        
+                        SizedBox(height: size.height * 0.02),
+                        
+                        // Paket Aktif & Sisa Sesi
+                        _buildActivePackageCard(size: size, isDark: isDark),
+                        
+                        SizedBox(height: size.height * 0.02),
+                        
+                        // Jadwal Terdekat (Next Class)
+                        _buildNextClassCard(size: size, isDark: isDark),
+                        
+                        SizedBox(height: size.height * 0.02),
 
                             // Program Renang
                             Card(
@@ -279,7 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       color: Colors.black.withOpacity(0.03),
                                       blurRadius: 0.5,
                                       spreadRadius: 1,
-                                      offset: Offset(0, 0), // Shadow ke semua sisi, termasuk atas
+                                  offset: Offset(0, 0),
                                     ),
                                   ],
                                   gradient: isDark
@@ -305,7 +187,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       style: GoogleFonts.rubik(
                                         fontSize: size.width * 0.045,
                                         fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white : Color(0xFF003566),
+                                        color: isDark ? Colors.white : AppColors.navy,
                                       ),
                                     ),
                                     SizedBox(height: size.height * 0.015),
@@ -313,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                               ),
-                            ),
+                              ),
 
                             // Card Promosi Maestro Swim
                             _buildPromoCard(size: size, isDark: isDark),
@@ -336,245 +218,157 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               height: 100,
                             ),
 
-                            // Partner Kami Section
-                            _buildPartnerSection(size),
-                            
-                            // Lisensi Section
-                            _buildLicenseSection(size),
-                            // Katalog Produk Maestro Swim Button (pindah ke bawah master hydro)
-                            SizedBox(height: size.height * 0.014),
-                            // Contact Us
-                            TweenAnimationBuilder<double>(
-                              key: ValueKey('contact_card_animation'),
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              duration: Duration(milliseconds: 900),
-                              curve: Curves.easeOutBack,
-                              builder: (context, value, child) => Opacity(
-                                opacity: value.clamp(0.0, 1.0),
-                                child: Transform.translate(
-                                  offset: Offset(0, (1 - value) * 30),
-                                  child: child,
-                                ),
-                              ),
-                              child: Card(
-                                color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.18),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(size.width * 0.030),
-                                      child: LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          return FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            child: Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                // Avatar admin/ilustrasi
-                                                Container(
-                                                  width: size.width * 0.10,
-                                                  height: size.width * 0.15,
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color: Color(0xFF003566),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Color(0xFF00B4D8).withOpacity(0.13),
-                                                        blurRadius: 8,
-                                                        offset: Offset(0, 2),
+                        // Contact Us
+                        _wrapWhite(
+                          size: size,
+                          child: TweenAnimationBuilder<double>(
+                          key: ValueKey('contact_card_animation'),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: Duration(milliseconds: 900),
+                          curve: Curves.easeOutBack,
+                          builder: (context, value, child) => Opacity(
+                            opacity: value.clamp(0.0, 1.0),
+                            child: Transform.translate(
+                              offset: Offset(0, (1 - value) * 30),
+                              child: child,
+                            ),
+                          ),
+                          child: Card(
+                            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.18),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                child: Padding(
+                                  padding: EdgeInsets.all(size.width * 0.030),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      return FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Avatar admin/ilustrasi
+                                            Container(
+                                              width: size.width * 0.10,
+                                              height: size.width * 0.15,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: AppColors.navy,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Color(0xFF00B4D8).withOpacity(0.13),
+                                                    blurRadius: 8,
+                                                    offset: Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  "👩🏻‍💼",
+                                                  style: TextStyle(fontSize: size.width * 0.08),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: size.width * 0.03),
+                                            ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                maxWidth: size.width * 0.48,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      ShaderMask(
+                                                        shaderCallback: (Rect bounds) {
+                                                          return LinearGradient(
+                                                            colors: [AppColors.navy, AppColors.navy],
+                                                            begin: Alignment.topLeft,
+                                                            end: Alignment.bottomRight,
+                                                          ).createShader(bounds);
+                                                        },
+                                                        child: Text(
+                                                          "Contact Us ",
+                                                          style: GoogleFonts.nunito(
+                                                            fontSize: size.width * 0.042,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
                                                       ),
+                                                      Icon(Icons.chat_bubble_rounded, color: AppColors.navy, size: size.width * 0.055),
                                                     ],
                                                   ),
-                                                  child: Center(
-                                                    child: Text(
-                                                      "👩🏻‍💼",
-                                                      style: TextStyle(fontSize: size.width * 0.08),
+                                                  SizedBox(height: size.height * 0.004),
+                                                  Container(
+                                                    decoration: BoxDecoration(
+                                                      color: Color.fromARGB(255, 150, 150, 150).withOpacity(0.09),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.info_outline, color: AppColors.navy, size: size.width * 0.035),
+                                                        SizedBox(width: 4),
+                                                        Expanded(
+                                                          child: Text(
+                                                            "Ada pertanyaan terkait Maestro Swim? Hubungi admin!",
+                                                            style: GoogleFonts.nunito(
+                                                              fontStyle: FontStyle.italic,
+                                                              fontSize: size.width * 0.034,
+                                                              color: isDark ? Colors.white70 : AppColors.navy,
+                                                            ),
+                                                            maxLines: 6,
+                                                            softWrap: true,
+                                                          ),
+                                                        ),
+                                                        SizedBox(width: 4),
+                                                      ],
                                                     ),
                                                   ),
-                                                ),
-                                                SizedBox(width: size.width * 0.03),
-                                                ConstrainedBox(
-                                                  constraints: BoxConstraints(
-                                                    maxWidth: size.width * 0.48,
-                                                  ),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          ShaderMask(
-                                                            shaderCallback: (Rect bounds) {
-                                                              return LinearGradient(
-                                                                colors: [Color(0xFF003566), Color(0xFF003566)],
-                                                                begin: Alignment.topLeft,
-                                                                end: Alignment.bottomRight,
-                                                              ).createShader(bounds);
-                                                            },
-                                                            child: Text(
-                                                              "Contact Us ",
-                                                              style: GoogleFonts.nunito(
-                                                                fontSize: size.width * 0.042,
-                                                                fontWeight: FontWeight.bold,
-                                                                color: Colors.white,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          Icon(Icons.chat_bubble_rounded, color: Color(0xFF003566), size: size.width * 0.055),
-                                                        ],
-                                                      ),
-                                                      SizedBox(height: size.height * 0.004),
-                                                      Container(
-                                                        decoration: BoxDecoration(
-                                                          color: Color.fromARGB(255, 150, 150, 150).withOpacity(0.09),
-                                                          borderRadius: BorderRadius.circular(12),
-                                                        ),
-                                                        child: Row(
-                                                          mainAxisSize: MainAxisSize.min,
-                                                          children: [
-                                                            Icon(Icons.info_outline, color: Color(0xFF003566), size: size.width * 0.035),
-                                                            SizedBox(width: 4),
-                                                            Expanded(
-                                                              child: Text(
-                                                                "Ada pertanyaan terkait Maestro Swim? Hubungi admin!",
-                                                                style: GoogleFonts.nunito(
-                                                                  fontStyle: FontStyle.italic,
-                                                                  fontSize: size.width * 0.034,
-                                                                  color: isDark ? Colors.white70 : Color(0xFF003566),
-                                                                ),
-                                                                maxLines: 6,
-                                                                softWrap: true,
-                                                              ),
-                                                            ),
-                                                            SizedBox(width: 4),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                SizedBox(width: size.width * 0.02),
-                                                _AnimatedWhatsAppButton(size: size, onTap: _launchWhatsApp),
-                                              ],
+                                                ],
+                                              ),
                                             ),
-                                          );
-                                        },
-                                      ),
-                                    ),
+                                            SizedBox(width: size.width * 0.02),
+                                            _AnimatedWhatsAppButton(size: size, onTap: _launchWhatsApp),
+                                          ],
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),
                             ),
+                          ),
+                        ),
+                        ),
+                        
+                        // Partner Kami Section
+                        _wrapWhite(
+                          size: size,
+                          child: _buildPartnerSection(size),
+                        ),
+                        
+                        // Lisensi Section
+                        _wrapWhite(
+                          size: size,
+                          child: _buildLicenseSection(size),
+                        ),
+                        
+                        // Social Media Section
+                        _wrapWhite(
+                          size: size,
+                          child: _buildSocialMediaSection(size: size, isDark: isDark),
+                        ),
+                        SizedBox(height: size.height * 0.02), 
 
-                            // Social Media Section
-                            TweenAnimationBuilder<double>(
-                              key: ValueKey('social_media_card_animation'),
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              duration: Duration(milliseconds: 900),
-                              curve: Curves.easeOutBack,
-                              builder: (context, value, child) => Opacity(
-                                opacity: value.clamp(0.0, 1.0),
-                                child: Transform.translate(
-                                  offset: Offset(0, (1 - value) * 30),
-                                  child: child,
-                                ),
-                              ),
-                              child: Card(
-                                color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.18),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(size.width * 0.030),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              ShaderMask(
-                                                shaderCallback: (Rect bounds) {
-                                                  return LinearGradient(
-                                                    colors: [Color(0xFF003566), Color(0xFF003566)],
-                                                    begin: Alignment.topLeft,
-                                                    end: Alignment.bottomRight,
-                                                  ).createShader(bounds);
-                                                },
-                                                child: Text(
-                                                  "Social Media",
-                                                  style: GoogleFonts.nunito(
-                                                    fontSize: size.width * 0.042,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(width: 8),
-                                              Icon(Icons.public, color: Color(0xFF003566), size: size.width * 0.055),
-                                            ],
-                                          ),
-                                          SizedBox(height: size.height * 0.012),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              _SocialMediaButton(
-                                                size: size,
-                                                handle: '',
-                                                url: 'https://wa.me/628156125474',
-                                                iconAsset: 'assets/images/whatsapp.logo.png',
-                                                compact: true,
-                                              ),
-                                              _SocialMediaButton(
-                                                size: size,
-  
-                                                handle: '',
-                                                url: 'https://www.instagram.com/maestro_swim/',
-                                                iconAsset: 'assets/images/instagram.logo.png',
-                                                compact: true,
-                                              ),
-                                              _SocialMediaButton(
-                                                size: size,
-                                                handle: '',
-                                                url: 'https://www.youtube.com/channel/UCYyhlR2xLc-3QIqE2RsyDbg',
-                                                iconAsset: 'assets/images/youtube.logo.png',
-                                                compact: true,
-                                              ),
-                                              _SocialMediaButton(
-                                                size: size,
-                                                handle: '',
-                                                url: 'https://www.tiktok.com/@maestro_swim/',
-                                                iconAsset: 'assets/images/tiktok.logo.png',
-                                                compact: true,
-                                              ),
-                                              _SocialMediaButton(
-                                                size: size,
-                                                handle: '',
-                                                url: 'https://www.facebook.com/maestroswim/',
-                                                iconAsset: 'assets/images/facebook.logo.png',
-                                                compact: true,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
-                      ),
-                    ),
-                    SizedBox(height: size.height * 0.04),
                   ],
                 ),
               ),
@@ -679,128 +473,215 @@ Widget buildCategoryCard({
   );
 }
 
-// Widget untuk menampilkan Partner Kami
-Widget _buildPartnerSection(Size size) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.handshake, color: Color(0xFF003566), size: size.width * 0.06),
-            SizedBox(width: 8),
-            Text(
-              "Partner Kami",
-              textAlign: TextAlign.start,
-              style: GoogleFonts.rubik(
-                fontSize: size.width * 0.05,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF003566),
-              ),
-            ),
-          ],
-        ),
+// Widget untuk menampilkan Social Media (Compact)
+Widget _buildSocialMediaSection({required Size size, required bool isDark}) {
+  return Card(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
       ),
-      Container(
-        margin: EdgeInsets.only(bottom: 16.0),
-        child: CarouselSlider(
-          items: [
-            'assets/images/arkadia.jpg',
-            'assets/images/n112.jpg',
-            'assets/images/olympic.png',
-            'assets/images/oasis.png',
-            'assets/images/wonderclub.png',
-            'assets/images/marcopolo.jpg',
-            'assets/images/pillowpool.png',
-          ].map((imagePath) {
-            return Container(
-              width: size.width * 0.28,
-              margin: EdgeInsets.symmetric(horizontal: 8.0),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.public, color: AppColors.navy, size: size.width * 0.055),
+              SizedBox(width: 8),
+              Text(
+                "Social Media",
+                style: GoogleFonts.nunito(
+                  fontSize: size.width * 0.042,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.navy,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.02),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _SocialMediaButton(
+                size: size,
+                handle: '',
+                url: 'https://wa.me/628156125474',
+                iconAsset: 'assets/images/whatsapp.logo.png',
+                compact: true,
+              ),
+              _SocialMediaButton(
+                size: size,
+                handle: '',
+                url: 'https://www.instagram.com/maestro_swim/',
+                iconAsset: 'assets/images/instagram.logo.png',
+                compact: true,
+              ),
+              _SocialMediaButton(
+                size: size,
+                handle: '',
+                url: 'https://www.youtube.com/channel/UCYyhlR2xLc-3QIqE2RsyDbg',
+                iconAsset: 'assets/images/youtube.logo.png',
+                compact: true,
+              ),
+              _SocialMediaButton(
+                size: size,
+                handle: '',
+                url: 'https://www.tiktok.com/@maestro_swim/',
+                iconAsset: 'assets/images/tiktok.logo.png',
+                compact: true,
+              ),
+              _SocialMediaButton(
+                size: size,
+                handle: '',
+                url: 'https://www.facebook.com/maestroswim/',
+                iconAsset: 'assets/images/facebook.logo.png',
+                compact: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// Widget untuk menampilkan Partner Kami (Compact)
+Widget _buildPartnerSection(Size size) {
+  return Card(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+      ),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.handshake, color: AppColors.navy, size: size.width * 0.055),
+              SizedBox(width: 8),
+              Text(
+                "Partner Kami",
+                style: GoogleFonts.nunito(
+                  fontSize: size.width * 0.042,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.navy,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.012),
+          Container(
+            height: size.height * 0.08,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: [
+                'assets/images/arkadia.jpg',
+                'assets/images/n112.jpg',
+                'assets/images/olympic.png',
+                'assets/images/oasis.png',
+                'assets/images/wonderclub.png',
+                'assets/images/marcopolo.jpg',
+                'assets/images/pillowpool.png',
+              ].length,
+              itemBuilder: (context, index) {
+                final imagePath = [
+                  'assets/images/arkadia.jpg',
+                  'assets/images/n112.jpg',
+                  'assets/images/olympic.png',
+                  'assets/images/oasis.png',
+                  'assets/images/wonderclub.png',
+                  'assets/images/marcopolo.jpg',
+                  'assets/images/pillowpool.png',
+                ][index];
+                return Container(
+                  width: size.width * 0.18,
+                  height: size.height * 0.08,
+                  margin: EdgeInsets.only(right: 8.0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8.0),
+                    color: Colors.white,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// Widget untuk menampilkan Lisensi (Compact)
+Widget _buildLicenseSection(Size size) {
+  return Card(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+      ),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.verified, color: AppColors.navy, size: size.width * 0.055),
+              SizedBox(width: 8),
+              Text(
+                "Lisensi",
+                style: GoogleFonts.nunito(
+                  fontSize: size.width * 0.042,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.navy,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.012),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              'assets/images/asca.png',
+              'assets/images/akuatik.png',
+              'assets/images/aasm.png',
+            ].map((imagePath) => Container(
+              width: size.width * 0.20,
+              height: size.height * 0.08,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10.0),
+                borderRadius: BorderRadius.circular(8.0),
                 color: Colors.white,
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10.0),
+                borderRadius: BorderRadius.circular(8.0),
                 child: Image.asset(
                   imagePath,
                   fit: BoxFit.contain,
                 ),
               ),
-            );
-          }).toList(),
-          options: CarouselOptions(
-            height: size.height * 0.12,
-            autoPlay: false,
-            enlargeCenterPage: false,
-            viewportFraction: 0.3,
-            initialPage: 0,
-            enableInfiniteScroll: true,
-            scrollPhysics: BouncingScrollPhysics(),
+            )).toList(),
           ),
-        ),
+        ],
       ),
-    ],
-  );
-}
-
-// Widget untuk menampilkan Lisensi
-Widget _buildLicenseSection(Size size) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.verified, color: Color(0xFF003566), size: size.width * 0.06),
-            SizedBox(width: 8),
-            Text(
-              "Lisensi",
-              textAlign: TextAlign.start,
-              style: GoogleFonts.rubik(
-                fontSize: size.width * 0.05,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF003566),
-              ),
-            ),
-          ],
-        ),
-      ),
-      Container(
-        margin: EdgeInsets.only(bottom: 16.0),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ...[
-                'assets/images/asca.png',
-                'assets/images/akuatik.png',
-                'assets/images/aasm.png',
-              ].map((imagePath) => Container(
-                width: size.width * 0.22,
-                height: size.height * 0.10,
-                margin: EdgeInsets.symmetric(horizontal: 8.0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10.0),
-                  color: Colors.white,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10.0),
-                  child: Image.asset(
-                    imagePath,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              )),
-            ],
-          ),
-        ),
-      ),
-    ],
+    ),
   );
 }
 
@@ -1324,7 +1205,7 @@ Widget _buildLocationCard({required Size size, required bool isDark}) {
                     children: [
                       Icon(
                         Icons.place_outlined,
-                        color: Color(0xFF003566),
+                        color: AppColors.navy,
                         size: size.width * 0.06,
                       ),
                       SizedBox(width: size.width * 0.02),
@@ -1333,7 +1214,7 @@ Widget _buildLocationCard({required Size size, required bool isDark}) {
                         style: GoogleFonts.rubik(
                           fontSize: size.width * 0.045,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Color(0xFF003566),
+                          color: isDark ? Colors.white : AppColors.navy,
                         ),
                       ),
                     ],
@@ -1351,7 +1232,7 @@ Widget _buildLocationCard({required Size size, required bool isDark}) {
                           margin: EdgeInsets.only(right: size.width * 0.03),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Color(0xFF003566), Color(0xFF00509E)],
+                              colors: [AppColors.navy, AppColors.navy],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -1401,7 +1282,7 @@ Widget _buildLocationCard({required Size size, required bool isDark}) {
             height: size.height * 0.05,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF003566), Color(0xFF00509E)],
+                colors: [AppColors.navy, AppColors.navy],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1524,7 +1405,7 @@ Widget _buildTestimoniCard({required Size size, required bool isDark}) {
                     children: [
                       Icon(
                         Icons.record_voice_over,
-                        color: Color(0xFF003566),
+                        color: AppColors.navy,
                         size: size.width * 0.06,
                       ),
                       SizedBox(width: size.width * 0.018),
@@ -1534,7 +1415,7 @@ Widget _buildTestimoniCard({required Size size, required bool isDark}) {
                         style: GoogleFonts.rubik(
                           fontSize: size.width * 0.05,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003566),
+                          color: AppColors.navy,
                         ),
                       ),
                     ],
@@ -1556,7 +1437,7 @@ Widget _buildTestimoniCard({required Size size, required bool isDark}) {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(15),
                       gradient: LinearGradient(
-                        colors: [Color(0xFF003566), Color(0xFF00509E)],
+                        colors: [AppColors.navy, AppColors.navy],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -1635,5 +1516,577 @@ Widget _buildTestimoniCard({required Size size, required bool isDark}) {
         ),
       ),
     ],
+  );
+}
+
+// Widget Pengumuman Singkat / Highlight
+Widget _buildAnnouncementCard({required Size size, required bool isDark}) {
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [AppColors.navy, AppColors.navy],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navy.withOpacity(0.2),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.campaign,
+                  color: Colors.white,
+                  size: size.width * 0.06,
+                ),
+              ),
+              SizedBox(width: size.width * 0.03),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Pengumuman",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.045,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.015),
+          Container(
+            padding: EdgeInsets.symmetric(vertical: size.width * 0.02, horizontal: size.width * 0.03),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.white,
+                  size: size.width * 0.045,
+                ),
+                SizedBox(width: size.width * 0.02),
+                Expanded(
+                  child: Text(
+                    "Info terbaru Maestro Swim",
+                    style: GoogleFonts.nunito(
+                      fontSize: size.width * 0.037,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// Widget Ringkasan Profil Siswa/Orangtua
+Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: size.width * 0.12,
+                height: size.width * 0.12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [AppColors.navy, AppColors.navy],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.navy.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    "A",
+                    style: GoogleFonts.nunito(
+                      fontSize: size.width * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: size.width * 0.03),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Arya",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.045,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                    Text(
+                      "Siswa Maestro Swim",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Color(0xFF00B97A).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Color(0xFF00B97A),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  "Aktif",
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.03,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF00B97A),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.015),
+          Row(
+            children: [
+              Expanded(
+                child: _buildProfileInfoItem(
+                  icon: Icons.calendar_today,
+                  label: "Bergabung",
+                  value: "Jan 2024",
+                  size: size,
+                ),
+              ),
+              Expanded(
+                child: _buildProfileInfoItem(
+                  icon: Icons.location_on,
+                  label: "Lokasi",
+                  value: "Bandung",
+                  size: size,
+                ),
+              ),
+              Expanded(
+                child: _buildProfileInfoItem(
+                  icon: Icons.school,
+                  label: "Level",
+                  value: "Beginer 1",
+                  size: size,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildProfileInfoItem({
+  required IconData icon,
+  required String label,
+  required String value,
+  required Size size,
+}) {
+  return Column(
+    children: [
+      Icon(
+        icon,
+        color: AppColors.navy,
+        size: size.width * 0.05,
+      ),
+      SizedBox(height: size.height * 0.005),
+      Text(
+        label,
+        style: GoogleFonts.nunito(
+          fontSize: size.width * 0.03,
+          color: Colors.grey[600],
+        ),
+      ),
+      Text(
+        value,
+        style: GoogleFonts.nunito(
+          fontSize: size.width * 0.035,
+          fontWeight: FontWeight.bold,
+          color: AppColors.navy,
+        ),
+      ),
+    ],
+  );
+}
+
+// Widget Paket Aktif & Sisa Sesi
+Widget _buildActivePackageCard({required Size size, required bool isDark}) {
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.navy.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.card_membership,
+                  color: AppColors.navy,
+                  size: size.width * 0.06,
+                ),
+              ),
+              SizedBox(width: size.width * 0.03),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Paket Aktif",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.045,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                    Text(
+                      "Private 1 - 12 Pertemuan",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.02),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Sisa Pertemuan",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.005),
+                    Text(
+                      "8 Pertemuan",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.05,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF00B97A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Progress",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.005),
+                    LinearProgressIndicator(
+                      value: 0.33, // 4/12 = 0.33
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.navy),
+                      minHeight: 8,
+                    ),
+                    SizedBox(height: size.height * 0.005),
+                    Text(
+                      "33% Selesai",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.03,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.015),
+          Container(
+            padding: EdgeInsets.all(size.width * 0.03),
+            decoration: BoxDecoration(
+              color: AppColors.navy.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.navy.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.schedule,
+                  color: AppColors.navy,
+                  size: size.width * 0.04,
+                ),
+                SizedBox(width: size.width * 0.02),
+                Text(
+                  "Berlaku hingga: 15 Maret 2024",
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.035,
+                    color: AppColors.navy,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// Widget Jadwal Terdekat (Next Class)
+Widget _buildNextClassCard({required Size size, required bool isDark}) {
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [AppColors.navy, AppColors.navy],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navy.withOpacity(0.2),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.schedule,
+                  color: Colors.white,
+                  size: size.width * 0.06,
+                ),
+              ),
+              SizedBox(width: size.width * 0.03),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Kelas Berikutnya",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.045,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      "Private 1 dengan Coach Santi",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.02),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Tanggal",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.005),
+                    Text(
+                      "Senin, 5 Feb 2024",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.04,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Waktu",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.005),
+                    Text(
+                      "16:00 - 17:00",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.04,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: size.height * 0.015),
+          Container(
+            padding: EdgeInsets.all(size.width * 0.03),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.timer,
+                  color: Colors.white,
+                  size: size.width * 0.04,
+                ),
+                SizedBox(width: size.width * 0.02),
+                Text(
+                  "Sisa waktu: 2 hari 14 jam",
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.035,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 }

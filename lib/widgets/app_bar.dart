@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/theme_provider.dart';
-import 'package:maestro_client_mobile/providers/notification_provider.dart';
-import 'package:maestro_client_mobile/widgets/notification_badge.dart';
 import 'dart:ui';
+import 'package:maestro_client_mobile/theme/app_theme.dart';
+import 'package:maestro_client_mobile/screens/menu_screen.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
@@ -13,38 +13,21 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDarkMode
-            ? const Color.fromARGB(255, 30, 30, 30)
-            : Color(0xFF003566)
+        color: isDarkMode ? const Color.fromARGB(255, 30, 30, 30) : AppColors.orange,
       ),
       child: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: _buildAnimatedLogo(context),
           actions: [
-            Stack(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.notifications_none, color: Colors.white, size: 32),
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/notifications');
-                  },
-                  tooltip: 'Notifikasi',
-                ),
-                Consumer<NotificationProvider>(
-                  builder: (context, notificationProvider, child) {
-                    return Positioned(
-                      right: 5,
-                      top: 5,
-                      child: NotificationBadge(
-                        count: notificationProvider.unreadCount,
-                        color: Colors.red,
-                        size: 18,
-                      ),
-                    );
-                  },
-                ),
-              ],
+            IconButton(
+              icon: Icon(Icons.menu, color: AppColors.white, size: 32),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => MenuScreen()),
+                );
+              },
+              tooltip: 'Menu',
             ),
           ],
       ),

@@ -52,8 +52,8 @@ class _OrderDateSiswaPageState extends State<OrderDateSiswaPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cardGradient = const LinearGradient(
-      colors: [Color.fromARGB(238, 0, 105, 204), Color(0xFF003566)],
+    final cardGradient = LinearGradient(
+      colors: [Theme.of(context).colorScheme.primary.withOpacity(0.9), Theme.of(context).colorScheme.primary],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -67,7 +67,7 @@ class _OrderDateSiswaPageState extends State<OrderDateSiswaPage> {
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: RefreshIndicator(
         onRefresh: _onRefresh,
-        color: Color(0xEF003566),
+        color: Theme.of(context).colorScheme.primary,
         backgroundColor: Colors.white,
         child: _isLoading
             ? ListView(
@@ -97,7 +97,6 @@ class _OrderDateSiswaPageState extends State<OrderDateSiswaPage> {
                           onPressed: _onRefresh,
                           icon: Icon(Icons.refresh),
                           label: Text('Coba Lagi'),
-                          style: ElevatedButton.styleFrom(backgroundColor: Color(0xEF003566), foregroundColor: Colors.white),
                         ),
                       ),
                     ],
@@ -116,7 +115,7 @@ class _OrderDateSiswaPageState extends State<OrderDateSiswaPage> {
                           borderRadius: BorderRadius.circular(scaleWidth(context, 20)),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color.fromARGB(238, 0, 105, 204).withOpacity(0.15),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                               blurRadius: scaleWidth(context, 12),
                               offset: Offset(0, scaleHeight(context, 4)),
                             ),

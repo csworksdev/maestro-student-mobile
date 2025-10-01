@@ -133,7 +133,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
                             onPressed: _onRefresh,
                             icon: Icon(Icons.refresh),
                             label: Text('Coba Lagi'),
-                            style: ElevatedButton.styleFrom(backgroundColor: Color(0xEF003566), foregroundColor: Colors.white),
                           ),
                         ),
                       ],
@@ -158,10 +157,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
 
                   Widget buildOrderCardAPI(Order order, int index) {
                     final isPending = order.isPaid.toLowerCase() == 'pending';
-                    final statusColor = const Color(0xEF003566); // warna biru tema
+                    final statusColor = Theme.of(context).colorScheme.primary; // navy
                     final statusIcon = isPending ? Icons.hourglass_top_rounded : Icons.verified_rounded;
-                    final cardGradient = const LinearGradient(
-                      colors: [Color(0xFF003566), Color.fromARGB(255, 0, 100, 200)],
+                    final cardGradient = LinearGradient(
+                      colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.9)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     );
