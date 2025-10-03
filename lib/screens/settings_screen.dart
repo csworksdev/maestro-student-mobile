@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'privacysecurity_screen.dart';
+import 'package:maestro_client_mobile/screens/account_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   late final List<_SettingItem> settingsItems;
@@ -11,10 +12,10 @@ class SettingsScreen extends StatelessWidget {
         icon: Icons.person,
         title: 'Akun',
         onTap: (context) {
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => AccountScreen()),
-          // );
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AccountScreen()),
+          );
         },
       ),
       _SettingItem(
@@ -27,107 +28,7 @@ class SettingsScreen extends StatelessWidget {
           );
         },
       ),
-      _SettingItem(
-        icon: Icons.notifications,
-        title: 'Test Notifikasi',
-        onTap: (context) {
-          _sendTestNotification(context);
-        },
-      ),
     ];
-  }
-  
-  // Fungsi untuk mengirim notifikasi test
-  void _sendTestNotification(BuildContext context) async {
-    // Variabel untuk menyimpan judul dan pesan notifikasi
-    String title = 'Order baru 🚀';
-    String body = 'Ini pesan test ke device';
-    
-    // Tampilkan dialog untuk input judul dan pesan
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Test Notifikasi'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Judul Notifikasi',
-                  hintText: 'Masukkan judul notifikasi',
-                ),
-                onChanged: (value) {
-                  title = value.isNotEmpty ? value : 'Order baru 🚀';
-                },
-                controller: TextEditingController(text: title),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Pesan Notifikasi',
-                  hintText: 'Masukkan pesan notifikasi',
-                ),
-                onChanged: (value) {
-                  body = value.isNotEmpty ? value : 'Ini pesan test ke device';
-                },
-                controller: TextEditingController(text: body),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Kirim'),
-            ),
-          ],
-        );
-      },
-    );
-    
-    // Tampilkan loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text("Mengirim notifikasi test..."),
-            ],
-          ),
-        );
-      },
-    );
-    
-    try {
-      
-      // Tutup dialog loading
-      Navigator.of(context).pop();
-      
-    } catch (e) {
-      // Tutup dialog loading jika terjadi error
-      Navigator.of(context).pop();
-      
-      // Tampilkan pesan error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   @override
@@ -138,9 +39,12 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Setelan'),
-        backgroundColor: isDarkMode ? Colors.grey[900] : const Color.fromARGB(255, 255, 255, 255),
+        backgroundColor: backgroundColor,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios, color: isDarkMode ? Colors.white : Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -154,30 +58,71 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildSettingCard(BuildContext context, _SettingItem item, bool isDarkMode) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      color: isDarkMode ? Colors.grey[850] : Colors.white,
-      child: InkWell(
-        onTap: () => item.onTap(context),
+    final size = MediaQuery.of(context).size;
+    
+    return Container(
+      margin: EdgeInsets.symmetric(
+        vertical: size.height * 0.01,
+        horizontal: size.width * 0.02,
+      ),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Color(0xFF121212) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(item.icon, color: isDarkMode ? Colors.orangeAccent : const Color.fromARGB(201, 0, 0, 0)),
-              SizedBox(width: 16),
-              Text(
-                item.title,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDarkMode ? Colors.white70 : Colors.black87,
+        boxShadow: [
+          BoxShadow(
+            color: isDarkMode 
+                ? Colors.black.withOpacity(0.3) 
+                : Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => item.onTap(context),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: size.width * 0.05,
+              vertical: size.height * 0.02,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDarkMode 
+                        ? Colors.white.withOpacity(0.1) 
+                        : Colors.black.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    item.icon,
+                    color: isDarkMode ? Colors.white : Colors.black,
+                    size: 22,
+                  ),
                 ),
-              ),
-              Spacer(),
-              Icon(Icons.arrow_forward_ios, size: 16, color: isDarkMode ? Colors.white30 : Colors.black26),
-            ],
+                SizedBox(width: size.width * 0.04),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: isDarkMode ? Colors.white.withOpacity(0.7) : Colors.black.withOpacity(0.7),
+                  size: 14,
+                ),
+              ],
+            ),
           ),
         ),
       ),

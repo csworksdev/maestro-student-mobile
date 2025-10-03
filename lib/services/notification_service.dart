@@ -3,8 +3,13 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:maestro_client_mobile/models/notification.dart';
+import 'package:maestro_client_mobile/providers/navigation_provider.dart';
+
+// Global navigator key untuk navigasi dari luar context
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -41,6 +46,27 @@ class NotificationService {
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         // Handle notifikasi yang diklik
         print('Notification clicked: ${response.payload}');
+        
+        // Navigasi ke halaman dashboard
+        if (navigatorKey.currentContext != null) {
+          // Navigasi ke MainScreen (halaman utama dengan dashboard)
+          Navigator.pushNamedAndRemoveUntil(
+            navigatorKey.currentContext!,
+            '/MainScreen',
+            (route) => false,
+          );
+          
+          // Pastikan tab yang aktif adalah dashboard (index 0)
+          Future.delayed(Duration(milliseconds: 300), () {
+            if (navigatorKey.currentContext != null) {
+              final navProvider = Provider.of<NavigationProvider>(
+                navigatorKey.currentContext!, 
+                listen: false
+              );
+              navProvider.currentIndex = 0; // Tab dashboard (sesuai dengan posisi di bottom navbar)
+            }
+          });
+        }
       },
     );
 
@@ -119,7 +145,12 @@ class NotificationService {
   }
 
   Future<String?> getToken() async {
-    return await FirebaseMessaging.instance.getToken();
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (e) {
+      print('Error getting FCM token: $e');
+      return null; // Return null if there's an error
+    }
   }
 
   Future<void> subscribeToTopic(String topic) async {
@@ -189,24 +220,16 @@ class NotificationService {
     }
   }
   
-  Future<bool> sendTestNotification(String token, {String authToken = ''}) async {
+  Future<bool> sendTestNotification(String token) async {
     try {
-      // Menampilkan notifikasi lokal terlebih dahulu
-      await showLocalNotification(
-        title: 'Notifikasi Test',
-        body: 'Ini adalah notifikasi test dari aplikasi Maestro Swim',
-        payload: jsonEncode({'type': 'test', 'message': 'Test message data'}),
-      );
-      
-      // Untuk pengujian dengan Hoppscotch.io
+      // Catatan: Ini hanya untuk pengujian, dalam produksi seharusnya menggunakan server backend
+      // Kunci server Firebase seharusnya tidak disimpan di aplikasi klien
+      const String serverKey = 'YOUR_SERVER_KEY'; // Ganti dengan kunci server Firebase Anda
       const String fcmUrl = 'https://fcm.googleapis.com/fcm/send';
-      
-      // Gunakan SERVER_KEY untuk Firebase atau token JWT untuk Hoppscotch
-      final String serverKey = 'key=YOUR_SERVER_KEY'; // Untuk Firebase
-      
+
       final headers = {
         'Content-Type': 'application/json',
-        'Authorization': authToken.isNotEmpty ? 'Bearer $authToken' : serverKey,
+        'Authorization': 'key=$serverKey',
       };
 
       final data = {
@@ -220,7 +243,7 @@ class NotificationService {
           'type': 'test',
           'message': 'Test message data',
         },
-        'to': token, // Token FCM perangkat tujuan
+        'to': token,
       };
 
       final response = await http.post(

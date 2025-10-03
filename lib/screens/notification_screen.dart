@@ -1,717 +1,564 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:maestro_client_mobile/models/notification.dart';
-import 'package:maestro_client_mobile/providers/notification_provider.dart';
 import 'package:maestro_client_mobile/providers/theme_provider.dart';
-import 'package:maestro_client_mobile/services/notification_service.dart';
-import 'package:intl/intl.dart';
+import 'package:maestro_client_mobile/providers/notification_provider.dart';
+import 'package:maestro_client_mobile/models/notification.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({Key? key}) : super(key: key);
-  
+
   @override
-  _NotificationScreenState createState() => _NotificationScreenState();
+  State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> 
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  bool _isLoading = false;
+class _NotificationScreenState extends State<NotificationScreen> {
+  // Definisi warna tema
+  final Color navyColor = const Color(0xFF044366);
+  final Color orangeColor = const Color(0xFFEE7D21);
   
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+    // Tidak menandai semua notifikasi sebagai sudah dibaca saat halaman dibuka
+    // Hanya memperbarui badge notifikasi
     
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _animationController.forward();
-    _fadeController.forward();
-    
-    // Update badge when notification page is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateBadge();
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+      notificationProvider.updateNotificationBadge();
     });
   }
   
   @override
   void dispose() {
-    _animationController.dispose();
-    _fadeController.dispose();
     super.dispose();
   }
   
-  void _updateBadge() {
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-    final notificationService = NotificationService();
-    notificationService.updateNotificationBadge(notificationProvider.unreadCount);
-  }
-  
-  // Function to refresh notifications
-  Future<void> _refreshNotifications() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    // Sort notifications: unread first, then read
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-    notificationProvider.sortNotificationsByReadStatus();
-    
-    await Future.delayed(const Duration(milliseconds: 1000));
-    
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final notificationProvider = Provider.of<NotificationProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final notificationProvider = Provider.of<NotificationProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
     final notifications = notificationProvider.notifications;
-
+    
+    // Warna tema
+    final Color navyColor = const Color(0xFF044366);
+    final Color orangeColor = const Color(0xFFEE7D21);
+    final Color whiteColor = isDarkMode ? const Color(0xFF1A1A1A) : Colors.white;
+    final Color backgroundColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
+    
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF0F0F0F) : const Color(0xFFFAFAFA),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: isDarkMode ? const Color(0xFF0F0F0F) : const Color(0xFFFAFAFA),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         centerTitle: true,
         actions: [
-          if (notifications.isNotEmpty) ...[
-            _buildActionButton(
-              icon: Icons.mark_email_read_outlined,
-              tooltip: 'Tandai semua sudah dibaca',
-              onPressed: () => _markAllAsRead(context, notificationProvider, isDarkMode),
+          if (notifications.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.delete_sweep_rounded,
+                  color: Color.fromRGBO(211, 47, 47, 1),
+                ),
+                onPressed: () {
+                  _showClearConfirmationDialog(context, navyColor, orangeColor);
+                },
+                tooltip: 'Hapus Semua Notifikasi',
+              ),
             ),
-            _buildActionButton(
-              icon: Icons.delete_sweep_outlined,
-              tooltip: 'Hapus semua notifikasi',
-              onPressed: () => _showDeleteAllDialog(context, notificationProvider, isDarkMode),
+        ],
+      ),
+      body: notifications.isEmpty
+          ? _buildEmptyState(isDarkMode, navyColor, orangeColor)
+          : _buildNotificationList(notifications, isDarkMode, navyColor, orangeColor, whiteColor),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDarkMode, Color navyColor, Color orangeColor) {
+    return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 245, 245, 245),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.notifications_none_rounded,
+                size: 80,
+                color: const Color.fromARGB(255, 200, 200, 200),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Belum ada notifikasi',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: const Color.fromARGB(158, 0, 0, 0),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Anda akan menerima notifikasi untuk\naktivitas penting di sini',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshNotifications,
-        color: const Color(0xFF0066A6),
-        backgroundColor: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-          
-          // Notification Stats Card
-          if (notifications.isNotEmpty)
-            SliverToBoxAdapter(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: _buildStatsCard(context, notificationProvider, isDarkMode),
-                ),
-              ),
-            ),
-          
-          // Notifications List or Empty State
-          _isLoading
-              ? SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                      ],
+        ),
+      );
+  }
+
+  Widget _buildNotificationList(List<NotificationModel> notifications, bool isDarkMode, Color navyColor, Color orangeColor, Color whiteColor) {
+    // Mengurutkan notifikasi: belum dibaca di atas, lalu berdasarkan waktu terkini
+    final sortedNotifications = [...notifications];
+    sortedNotifications.sort((a, b) {
+      // Pertama urutkan berdasarkan status baca
+      if (a.isRead != b.isRead) {
+        return a.isRead ? 1 : -1; // Yang belum dibaca di atas
+      }
+      // Kemudian urutkan berdasarkan waktu (terkini di atas)
+      return b.timestamp.compareTo(a.timestamp);
+    });
+    
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: sortedNotifications.length,
+      itemBuilder: (context, index) {
+        final notification = sortedNotifications[index];
+        
+        return Dismissible(
+                  key: Key(notification.id),
+                  background: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade700,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    child: const Icon(
+                      Icons.delete_rounded,
+                      color: Colors.white,
                     ),
                   ),
-                )
-              : notifications.isEmpty
-                  ? SliverFillRemaining(
-                      child: _buildEmptyState(isDarkMode),
-                    )
-                  : SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final notification = notifications[index];
-                            return _buildNotificationCard(
-                              context, 
-                              notification, 
-                              index, 
-                              isDarkMode,
-                              notificationProvider,
-                            );
-                          },
-                          childCount: notifications.length,
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (direction) {
+                    Provider.of<NotificationProvider>(context, listen: false)
+                        .removeNotification(notification.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Notifikasi dihapus',
+                          style: GoogleFonts.poppins(),
+                        ),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                        action: SnackBarAction(
+                          label: 'OK',
+                          textColor: Colors.white,
+                          onPressed: () {},
                         ),
                       ),
-                    ),
-        ],
-        ),
-      ),
-    );
+                    );
+                  },
+                  child: _buildNotificationItem(notification, isDarkMode, navyColor, orangeColor, whiteColor),
+                );
+          },
+        );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(right: 4),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: IconButton(
-        icon: Icon(
-          icon,
-          size: 22,
-          color: Colors.grey[600],
-        ),
-        onPressed: onPressed,
-        tooltip: tooltip,
-        splashRadius: 20,
-      ),
-    );
-  }
-
-  Widget _buildStatsCard(BuildContext context, NotificationProvider provider, bool isDarkMode) {
-    final unreadCount = provider.unreadCount;
-    final totalCount = provider.notifications.length;
+  Widget _buildNotificationItem(NotificationModel notification, bool isDarkMode, Color navyColor, Color orangeColor, Color whiteColor) {
+    final formattedDate = _formatDate(notification.timestamp);
     
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDarkMode 
-              ? [const Color(0xFF1A1A1A), const Color(0xFF2A2A2A)]
-              : [Colors.white, const Color(0xFFF8F9FA)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: isDarkMode 
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.grey.withValues(alpha: 0.1),
-            spreadRadius: 0,
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            color: isDarkMode ? Colors.black12 : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
+        border: notification.isRead 
+            ? null 
+            : Border.all(color: navyColor, width: 1.5),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [const Color.fromARGB(240, 0, 53, 102), const Color.fromARGB(240, 0, 53, 102)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              Icons.notifications_active_outlined,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            // Menampilkan detail notifikasi dan menandai sebagai sudah dibaca
+            Provider.of<NotificationProvider>(context, listen: false)
+                .markAsRead(notification.id);
+            _showNotificationDetails(context, notification, navyColor, orangeColor);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '$totalCount Notifikasi',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.white : const Color(0xFF1A1A1A),
+                // Icon notifikasi
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: notification.isRead 
+                        ? (isDarkMode ? navyColor.withOpacity(0.1) : orangeColor.withOpacity(0.1))
+                        : orangeColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        Icons.notifications_rounded,
+                        color: notification.isRead ? navyColor : navyColor,
+                        size: 26,
+                      ),
+                      if (!notification.isRead)
+                        Positioned(
+                          right: 10,
+                          top: 10,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: orangeColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: whiteColor, width: 1.5),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  unreadCount > 0 
-                      ? '$unreadCount belum dibaca'
-                      : 'Semua sudah dibaca',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: unreadCount > 0 
-                        ? const Color.fromARGB(240, 0, 53, 102)
-                        : Colors.green[600],
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 16),
+                // Konten notifikasi
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification.title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.w600,
+                          color: navyColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notification.body,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: isDarkMode ? Colors.white70 : Colors.black54,
+                          fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.access_time_rounded, size: 12, color: navyColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  formattedDate,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: navyColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: navyColor.withOpacity(0.5),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyState(bool isDarkMode) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+  void _showNotificationDetails(BuildContext context, NotificationModel notification, Color navyColor, Color orangeColor) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+    final whiteColor = isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF);
+    
+    // Menandai notifikasi sebagai sudah dibaca
+    notificationProvider.markAsRead(notification.id);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: whiteColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: EdgeInsets.zero,
+        title: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: navyColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: Row(
             children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: isDarkMode 
-                      ? const Color(0xFF1A1A1A)
-                      : const Color(0xFFF8F9FA),
-                  borderRadius: BorderRadius.circular(60),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDarkMode 
-                          ? Colors.black.withValues(alpha: 0.3)
-                          : Colors.grey.withValues(alpha: 0.1),
-                      spreadRadius: 0,
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.notifications_off_outlined,
-                  size: 50,
-                  color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Tidak ada notifikasi',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w400,
-                  color: isDarkMode ? Colors.white : const Color(0xFF1A1A1A),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Anda akan menerima notifikasi di sini',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  height: 1.5,
+              Icon(Icons.notifications_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  notification.title,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationCard(
-    BuildContext context,
-    NotificationModel notification,
-    int index,
-    bool isDarkMode,
-    NotificationProvider provider,
-  ) {
-    final itemAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Interval(
-        0.1 * index.clamp(0, 9),
-        0.8 + 0.1 * index.clamp(0, 4),
-        curve: Curves.easeOutCubic,
-      ),
-    ));
-
-    return SlideTransition(
-      position: itemAnimation,
-      child: FadeTransition(
-        opacity: _animationController,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Dismissible(
-            key: Key(notification.id),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.red[400]!, Colors.red[600]!],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: orangeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: orangeColor.withOpacity(0.3)),
                 ),
-                borderRadius: BorderRadius.circular(16),
+                child: Text(
+                  notification.body,
+                  style: GoogleFonts.poppins(
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                    fontSize: 14,
+                  ),
+                ),
               ),
-              child: const Icon(
-                Icons.delete_outline_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            onDismissed: (direction) {
-              provider.removeNotification(notification.id);
-              final notificationService = NotificationService();
-              notificationService.updateNotificationBadge(provider.unreadCount);
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Notifikasi dihapus',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: navyColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.access_time_rounded, size: 14, color: navyColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDate(notification.timestamp),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: navyColor,
+                      ),
                     ),
-                  ),
-                  backgroundColor: Colors.red[400],
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  margin: const EdgeInsets.all(16),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => _showNotificationDetail(context, notification, provider, isDarkMode),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: notification.isRead
-                        ? isDarkMode
-                            ? const Color(0xFF1A1A1A)
-                            : Colors.white
-                        : isDarkMode
-                            ? const Color(0xFF2A2A2A)
-                            : const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(16),
-                    border: notification.isRead
-                        ? null
-                        : Border.all(
-                            color: const Color.fromARGB(240, 0, 53, 102).withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDarkMode
-                            ? Colors.black.withValues(alpha: 0.2)
-                            : Colors.grey.withValues(alpha: 0.08),
-                        spreadRadius: 0,
-                        blurRadius: 12,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Notification Icon
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: notification.isRead
-                                ? [Colors.grey[400]!, Colors.grey[600]!]
-                                : [const Color.fromARGB(240, 0, 53, 102), const Color.fromARGB(240, 0, 53, 102)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      
-                      // Notification Content
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    notification.title,
-                                    style: GoogleFonts.inter(
-                                      fontWeight: notification.isRead
-                                          ? FontWeight.w600
-                                          : FontWeight.w700,
-                                      fontSize: 15,
-                                      color: isDarkMode ? Colors.white : const Color(0xFF1A1A1A),
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                ),
-                                if (!notification.isRead)
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: const Color.fromARGB(240, 0, 53, 102),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              notification.body,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                                height: 1.4,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _formatTimestamp(notification.timestamp),
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-    
-    if (difference.inDays > 0) {
-      return DateFormat('dd MMM yyyy').format(timestamp);
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} jam yang lalu';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} menit yang lalu';
-    } else {
-      return 'Baru saja';
-    }
-  }
-
-  void _markAllAsRead(BuildContext context, NotificationProvider provider, bool isDarkMode) {
-    provider.markAllAsRead();
-    final notificationService = NotificationService();
-    notificationService.updateNotificationBadge(0);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Semua notifikasi telah dibaca',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _showDeleteAllDialog(BuildContext context, NotificationProvider provider, bool isDarkMode) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'Hapus Semua Notifikasi',
-          style: GoogleFonts.inter(
-            color: isDarkMode ? Colors.white : const Color(0xFF1A1A1A),
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-        content: Text(
-          'Apakah Anda yakin ingin menghapus semua notifikasi?',
-          style: GoogleFonts.inter(
-            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-            fontSize: 14,
-            height: 1.4,
+            ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              backgroundColor: orangeColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: Text(
-              'Batal',
-              style: GoogleFonts.inter(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              provider.clearNotifications();
-              final notificationService = NotificationService();
-              notificationService.updateNotificationBadge(0);
-              
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Semua notifikasi telah dihapus',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  backgroundColor: Colors.green[600],
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  margin: const EdgeInsets.all(16),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Text(
-              'Hapus',
-              style: GoogleFonts.inter(
-                color: Colors.red[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showNotificationDetail(
-    BuildContext context,
-    NotificationModel notification,
-    NotificationProvider provider,
-    bool isDarkMode,
-  ) {
-    if (!notification.isRead) {
-      provider.markAsRead(notification.id);
-      final notificationService = NotificationService();
-      notificationService.updateNotificationBadge(provider.unreadCount);
-    }
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          notification.title,
-          style: GoogleFonts.inter(
-            color: isDarkMode ? Colors.white : const Color(0xFF1A1A1A),
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              notification.body,
-              style: GoogleFonts.inter(
-                color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _formatTimestamp(notification.timestamp),
-              style: GoogleFonts.inter(
-                color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                fontSize: 12,
+              'Tutup',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
                 fontWeight: FontWeight.w500,
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Tutup',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0066A6),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ),
         ],
       ),
     );
+  }
+
+  void _showClearConfirmationDialog(BuildContext context, Color navyColor, Color orangeColor) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+    final whiteColor = isDarkMode ? const Color(0xFF1A1A1A) : Colors.white;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: whiteColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: EdgeInsets.zero,
+        title: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: navyColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.delete_sweep_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Hapus Semua Notifikasi',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        content: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: orangeColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: orangeColor.withOpacity(0.3)),
+          ),
+          child: Text(
+            'Apakah Anda yakin ingin menghapus semua notifikasi?',
+            style: GoogleFonts.poppins(
+              color: isDarkMode ? Colors.white70 : Colors.black87,
+            ),
+          ),
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.grey.withOpacity(0.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Batal',
+                  style: GoogleFonts.poppins(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.red.shade50,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Hapus',
+                      style: GoogleFonts.poppins(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                onPressed: () {
+                  final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+                  notificationProvider.clearAllNotifications();
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(Icons.check_circle_outline, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Semua notifikasi telah dihapus',
+                            style: GoogleFonts.poppins(),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'Hari ini, ${DateFormat('HH:mm').format(date)}';
+    } else if (difference.inDays == 1) {
+      return 'Kemarin, ${DateFormat('HH:mm').format(date)}';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} hari yang lalu';
+    } else {
+      return DateFormat('dd MMM yyyy, HH:mm').format(date);
+    }
   }
 }

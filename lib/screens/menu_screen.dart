@@ -9,26 +9,31 @@ class MenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     bool isDarkMode = themeProvider.isDarkMode;
-    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
+    final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
+    final Size size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: backgroundColor,
+      appBar: AppBar(
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios, color: textColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        automaticallyImplyLeading: false,
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: size.width * 0.05, 
+            vertical: size.height * 0.01
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Menu',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 24),
+              SizedBox(height: size.height * 0.02),
               _buildMenuItem(
                 context: context,
                 icon: Icons.settings,
@@ -111,36 +116,56 @@ class MenuScreen extends StatelessWidget {
   }) {
     final Color textColor = isLogout ? Colors.red : (isDarkMode ? Colors.white : Colors.black);
     final Color iconColor = isLogout ? Colors.red : (isDarkMode ? Colors.white : Colors.black);
-    final Color cardColor = isDarkMode ? Colors.grey[800]! : Colors.grey[100]!;
+    final Color cardColor = isDarkMode ? Color(0xFF2C2C2E) : Colors.white;
+    final Color shadowColor = isDarkMode ? Colors.black12 : Colors.black12;
 
-    return Card(
-      color: cardColor,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(icon, color: iconColor, size: 24),
-              const SizedBox(width: 16),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: textColor,
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
                 ),
-              ),
-              const Spacer(),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: iconColor,
-                size: 16,
-              ),
-            ],
+                const SizedBox(width: 16),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: iconColor.withOpacity(0.7),
+                  size: 14,
+                ),
+              ],
+            ),
           ),
         ),
       ),

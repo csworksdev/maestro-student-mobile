@@ -4,11 +4,10 @@
     "project_id": "maestro-front",
     "storage_bucket": "maestro-front.firebasestorage.app"
 },
-
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:232446227609:android:e93ec825cc066b3f4df408",
+        "mobilesdk_app_id": "1:941681607975:android:9cc0637019261113a75502",
         "android_client_info": {
           "package_name": "com.example.maestro_client_mobile"
         }
@@ -16,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC0UIpjh5V3OBJh4WD5GTFwb6Ibes4-vAA"
+          "current_key": "AIzaSyBvAjtk0Y5tG5OMDzSeBEL615qyD275PtY"
         }
       ],
       "services": {

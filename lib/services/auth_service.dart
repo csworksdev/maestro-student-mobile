@@ -109,51 +109,168 @@ class AuthService {
   }
 
   /// Mengirim OTP ke nomor WhatsApp berdasarkan username
-  Future<bool> sendOtp({required String username, required String whatsappNumber}) async {
+  Future<Map<String, dynamic>> sendOtp({required String username}) async {
     try {
-      final url = Uri.parse('https://api.maestroswim.com/auth/users/send-otp/');
+      final url = Uri.parse('https://api.maestroswim.com/auth/users/send_otp/');
+      print('🔐 Mengirim permintaan OTP untuk username: $username');
+      
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username,
-          'whatsapp_number': whatsappNumber,
         }),
       );
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return true;
+      // Log respons lengkap untuk debugging
+      print('📩 Respons OTP [${response.statusCode}]: ${response.body}');
+
+      final responseData = jsonDecode(response.body);
+      
+      // Mengikuti format JSON yang diharapkan oleh backend
+      if (response.statusCode == 200) {
+        // Cek status dari response body
+        if (responseData['status'] == true) {
+          // Tampilkan kode OTP jika ada dalam respons (untuk debugging)
+          if (responseData.containsKey('otp')) {
+            print('🔑 KODE OTP: ${responseData['otp']}');
+          }
+          
+          print('✅ OTP berhasil dikirim');
+          return {
+            'success': true,
+            'status': responseData['status'],
+            'message': responseData['message'] ?? 'OTP sent to your WhatsApp',
+            'data': responseData['data'] ?? {
+              'status': 'OTP sent to your WhatsApp',
+              'otp_id': responseData['data']?['otp_id'] ?? '',
+              'phone': responseData['data']?['phone'] ?? '',
+              'expires_at': responseData['data']?['expires_at'] ?? '',
+            },
+            'meta': responseData['meta'] ?? {},
+            'error': responseData['error'] ?? [],
+          };
+        } else {
+          // Response dengan status false
+          print('❌ Gagal mengirim OTP: ${responseData['message']}');
+          return {
+            'success': false,
+            'status': responseData['status'],
+            'message': responseData['message'] ?? 'Pengguna tidak ditemukan',
+            'data': responseData['data'] ?? {},
+            'meta': responseData['meta'] ?? {},
+            'error': responseData['error'] ?? {},
+          };
+        }
       }
-      return false;
+      
+      print('❌ Gagal mengirim OTP. Status: ${response.statusCode}');
+      return {
+        'success': false,
+        'status': false,
+        'message': 'Gagal mengirim OTP. Silakan coba lagi.',
+        'data': {},
+        'meta': {},
+        'error': {},
+      };
     } catch (e) {
-      return false;
+      print('🚨 Error saat mengirim OTP: $e');
+      return {
+        'success': false,
+        'status': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+        'data': {},
+        'meta': {},
+        'error': {},
+      };
+    }
+  }
+
+  /// Verifikasi kode OTP
+  Future<Map<String, dynamic>> verifyOtp({
+    required String otpId,
+    required String otp,
+  }) async {
+    try {
+      final url = Uri.parse('https://api.maestroswim.com/auth/users/verification_otp/');
+      print('🔍 Verifikasi OTP: ID=$otpId, Kode=$otp');
+      
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'otp_id': otpId,
+          'otp': int.parse(otp),
+        }),
+      );
+
+      // Log respons lengkap untuk debugging
+      print('📩 Respons Verifikasi OTP [${response.statusCode}]: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        print('✅ Verifikasi OTP berhasil');
+        return {
+          'success': true,
+          'message': data['data']['message'] ?? 'OTP berhasil diverifikasi',
+        };
+      }
+      
+      print('❌ Verifikasi OTP gagal. Status: ${response.statusCode}');
+      return {
+        'success': false,
+        'message': 'Verifikasi OTP gagal. Kode OTP mungkin salah atau sudah kadaluarsa.',
+      };
+    } catch (e) {
+      print('🚨 Error saat verifikasi OTP: $e');
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
     }
   }
 
   /// Reset password menggunakan OTP
-  Future<bool> resetPasswordWithOtp({
-    required String otp,
-    required String username,
+  Future<Map<String, dynamic>> resetPasswordWithOtp({
+    required String otpId,
     required String newPassword,
   }) async {
     try {
-      final url = Uri.parse('https://api.maestroswim.com/auth/users/reset-password/');
+      final url = Uri.parse('https://api.maestroswim.com/auth/users/reset_password/');
+      print('🔄 Reset password dengan OTP ID: $otpId');
+      
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'otp': otp,
-          'username': username,
+          'otp_id': otpId,
           'new_password': newPassword,
         }),
       );
 
+      // Log respons untuk debugging
+      print('📩 Respons Reset Password [${response.statusCode}]: ${response.body}');
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return true;
+        final data = jsonDecode(response.body);
+        print('✅ Reset password berhasil');
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Password berhasil direset',
+        };
       }
-      return false;
+      
+      print('❌ Gagal reset password. Status: ${response.statusCode}');
+      return {
+        'success': false,
+        'message': 'Gagal mereset password. Silakan coba lagi.',
+      };
     } catch (e) {
-      return false;
+      print('🚨 Error saat reset password: $e');
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
     }
   }
 }

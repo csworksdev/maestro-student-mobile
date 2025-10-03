@@ -130,6 +130,7 @@ flutter:
     - assets/images/asca.png
     - assets/images/akuatik.png
     - assets/images/aasm.png
+    - assets/images/promo_oktober.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

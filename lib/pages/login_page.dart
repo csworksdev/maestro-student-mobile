@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/auth_provider.dart';
 import 'package:maestro_client_mobile/services/notification_service.dart';
 import 'package:maestro_client_mobile/pages/forgot_password_page.dart';
+import 'package:maestro_client_mobile/pages/aktivasi_akun_page.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -94,21 +95,36 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                           SizedBox(height: screenHeight * 0.02),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: _forgotPassword,
-                              child: Text(
-                                "Lupa Password?",
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.035,
-                                  color: Color.fromARGB(209, 0, 40, 78),
-                                  fontWeight: FontWeight.w500,
-                                  fontStyle: FontStyle.italic,
-                                  decoration: TextDecoration.underline, // Tambahkan garis bawah
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton(
+                                onPressed: _aktivitasAkun,
+                                child: Text(
+                                  "Aktivitas Akun",
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.035,
+                                    color: Color.fromARGB(209, 0, 40, 78),
+                                    fontWeight: FontWeight.w500,
+                                    fontStyle: FontStyle.italic,
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
                               ),
-                            ),
+                              TextButton(
+                                onPressed: _forgotPassword,
+                                child: Text(
+                                  "Lupa Password?",
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.035,
+                                    color: Color.fromARGB(209, 0, 40, 78),
+                                    fontWeight: FontWeight.w500,
+                                    fontStyle: FontStyle.italic,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -210,19 +226,28 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     if (success) {
-      // Setelah login berhasil, dapatkan dan simpan FCM token ke server
-      final notificationService = NotificationService();
-      final fcmToken = await notificationService.getToken();
-      
       // Tampilkan token auth di debug console
       print('====== AUTH TOKEN ======');
       print(authProvider.token);
       print('========================');
       
-      // Tampilkan FCM token di debug console
-      print('====== FCM TOKEN ======');
-      print(fcmToken);
-      print('=======================');
+      // Dapatkan FCM token secara asinkron tanpa menunggu hasilnya
+      // sehingga tidak menghambat proses login
+      Future.delayed(Duration.zero, () async {
+        try {
+          print('Mencoba mendapatkan FCM token...');
+          final notificationService = NotificationService();
+          final fcmToken = await notificationService.getToken();
+          
+          // Tampilkan FCM token di debug console
+          print('====== FCM TOKEN ======');
+          print(fcmToken ?? 'FCM Token tidak tersedia');
+          print('=======================');
+        } catch (e) {
+          // Tangani error FCM token tanpa mengganggu proses login
+          print('Error saat mendapatkan FCM token: $e');
+        }
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -246,6 +271,15 @@ class _LoginPageState extends State<LoginPage> {
       context,
       MaterialPageRoute(
         builder: (context) => ForgotPasswordPage(),
+      ),
+    );
+  }
+  
+  void _aktivitasAkun() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AktivasiAkunPage(),
       ),
     );
   }

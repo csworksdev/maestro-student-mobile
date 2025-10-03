@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/theme_provider.dart';
 import 'package:maestro_client_mobile/providers/navigation_provider.dart';
+import 'package:maestro_client_mobile/providers/notification_provider.dart';
 import 'package:maestro_client_mobile/theme/app_theme.dart';
 
 class MainBottomNavBar extends StatelessWidget {
@@ -47,29 +48,69 @@ class MainBottomNavBar extends StatelessWidget {
           navProvider.currentIndex = index;
           onTap(index);
         },
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             label: 'Beranda',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.schedule),
             label: 'Jadwal',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.trending_up),
             label: 'Progress',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.card_giftcard),
             label: 'Paket',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
+            icon: _NotificationIcon(),
             label: 'Notifikasi',
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NotificationIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final notificationProvider = Provider.of<NotificationProvider>(context);
+    final unreadCount = notificationProvider.unreadCount;
+    
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.notifications_outlined),
+        if (unreadCount > 0)
+          Positioned(
+            right: -5,
+            top: -5,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              child: Text(
+                unreadCount > 9 ? '9+' : unreadCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

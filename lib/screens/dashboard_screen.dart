@@ -10,6 +10,7 @@ import 'package:maestro_client_mobile/pages/programrenang/babyswim.dart';
 import 'package:maestro_client_mobile/pages/programrenang/private1.dart';
 import 'package:maestro_client_mobile/pages/programrenang/private2.dart';
 import 'package:maestro_client_mobile/pages/programrenang/group.dart';
+import 'package:maestro_client_mobile/pages/keunggulan_kolam_page.dart';
 
 // Tambahkan stateful widget agar bisa mengatur loading state pada refresh
 
@@ -44,13 +45,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Tambahkan fungsi untuk membuka WhatsApp
   void _launchWhatsApp() async {
-    final phone = '6282118040677'; // Ganti dengan nomor WhatsApp tujuan (format internasional, tanpa +)
+    final phone = '628156125474'; // Nomor WhatsApp tujuan (format internasional, tanpa +)
     final message = Uri.encodeComponent("Halo, saya ingin bertanya tentang Maestro Swim.");
-    final url = 'https://wa.me/$phone?text=$message';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      // Bisa tambahkan snackbar jika gagal
+    final uri = Uri.parse('https://wa.me/$phone?text=$message');
+    
+    try {
+      if (!await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      )) {
+        print('Could not launch $uri');
+      }
+    } catch (e) {
+      print('Error launching WhatsApp: $e');
     }
   }
 
@@ -124,7 +131,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     SizedBox(height: size.height * 0.02),
 
                     // Pengumuman Singkat / Highlight (dipindah di atas search bar)
-                    _buildAnnouncementCard(size: size, isDark: isDark),
+                    _buildAnnouncementCard(context: context, size: size, isDark: isDark),
 
                     SizedBox(height: size.height * 0.015),
 
@@ -1091,9 +1098,16 @@ class _SocialMediaButtonState extends State<_SocialMediaButton> with SingleTicke
     final double padding = widget.compact ? widget.size.width * 0.012 : widget.size.width * 0.025;
     return GestureDetector(
       onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
+      onTapUp: (_) async {
         _controller.reverse();
-        launchUrl(Uri.parse(widget.url), mode: LaunchMode.externalApplication);
+        try {
+          final uri = Uri.parse(widget.url);
+          if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+            print('Could not launch $uri');
+          }
+        } catch (e) {
+          print('Error launching URL: $e');
+        }
       },
       onTapCancel: () => _controller.reverse(),
       child: Column(
@@ -1274,45 +1288,52 @@ Widget _buildLocationCard({required Size size, required bool isDark}) {
         ),
       ),
       // Button Keunggulan Kolam Renang di luar card
-      Padding(
-        padding: EdgeInsets.only(bottom: size.height * 0.02, top: size.height * 0.01),
-        child: Center(
-          child: Container(
-            width: size.width * 0.8,
-            height: size.height * 0.05,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.navy, AppColors.navy],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+      Builder(
+        builder: (context) => Padding(
+          padding: EdgeInsets.only(bottom: size.height * 0.02, top: size.height * 0.01),
+          child: Center(
+            child: Container(
+              width: size.width * 0.8,
+              height: size.height * 0.06,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.navy, AppColors.navy],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                elevation: 2,
+                borderRadius: BorderRadius.circular(30),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.pool, color: Colors.white, size: size.width * 0.055),
-                  SizedBox(width: size.width * 0.025),
-                  Text(
-                    'Keunggulan Kolam Renang',
-                    style: GoogleFonts.rubik(
-                      fontSize: size.width * 0.04,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => KeunggulanKolamPage()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                ],
+                  elevation: 2,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.pool, color: Colors.white, size: size.width * 0.055),
+                    SizedBox(width: size.width * 0.025),
+                    Text(
+                      'Keunggulan Kolam Renang',
+                      style: GoogleFonts.rubik(
+                        fontSize: size.width * 0.04,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1519,8 +1540,57 @@ Widget _buildTestimoniCard({required Size size, required bool isDark}) {
   );
 }
 
+// Fungsi untuk menampilkan gambar dalam ukuran asli
+void _showFullSizeImage(BuildContext context, String imagePath) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: Image.asset(
+                imagePath,
+                fit: BoxFit.contain,
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 // Widget Pengumuman Singkat / Highlight
-Widget _buildAnnouncementCard({required Size size, required bool isDark}) {
+Widget _buildAnnouncementCard({required BuildContext context, required Size size, required bool isDark}) {
   return Card(
     elevation: 2,
     shape: RoundedRectangleBorder(
@@ -1579,36 +1649,46 @@ Widget _buildAnnouncementCard({required Size size, required bool isDark}) {
             ],
           ),
           SizedBox(height: size.height * 0.015),
-          Container(
-            padding: EdgeInsets.symmetric(vertical: size.width * 0.02, horizontal: size.width * 0.03),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
+          GestureDetector(
+            onTap: () {
+              _showFullSizeImage(context, 'assets/images/promo_oktober.jpg');
+            },
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: size.width * 0.02, horizontal: size.width * 0.03),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  color: Colors.white,
-                  size: size.width * 0.045,
-                ),
-                SizedBox(width: size.width * 0.02),
-                Expanded(
-                  child: Text(
-                    "Info terbaru Maestro Swim",
-                    style: GoogleFonts.nunito(
-                      fontSize: size.width * 0.037,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: size.width * 0.045,
                   ),
-                ),
-              ],
+                  SizedBox(width: size.width * 0.02),
+                  Expanded(
+                    child: Text(
+                      "Ada promo terbaru di bulan Oktober 2025!",
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.037,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(
+                    Icons.touch_app,
+                    color: Colors.white70,
+                    size: size.width * 0.045,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1738,7 +1818,7 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
                 child: _buildProfileInfoItem(
                   icon: Icons.school,
                   label: "Level",
-                  value: "Beginer 1",
+                  value: "Beginner 1",
                   size: size,
                 ),
               ),

@@ -30,6 +30,9 @@ import 'package:maestro_client_mobile/services/notification_service.dart';
 import 'package:maestro_client_mobile/services/api_service.dart';
 import 'package:maestro_client_mobile/theme/app_theme.dart';
 
+// Global navigator key for accessing navigator from anywhere
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 @pragma("vm:entry-point")
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -62,6 +65,13 @@ void main() async {
   final notificationService = NotificationService();
   await notificationService.initialize();
 
+  // Mengatur opsi presentasi notifikasi foreground
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(
@@ -91,6 +101,7 @@ class _MyAppState extends State<MyApp> {
       builder: (context, themeProvider, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          navigatorKey: navigatorKey, // Menggunakan navigatorKey global
           themeMode: themeProvider.themeMode,
           theme: buildLightTheme(),
           darkTheme: buildDarkTheme(),
@@ -176,6 +187,7 @@ class _MainScreenState extends State<MainScreen> {
         debugPrint("Aplikasi dibuka dari notifikasi terminated: ${message.messageId}");
 
         final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+        final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
         final notification = NotificationModel.fromFirebaseMessage({
           'messageId': message.messageId,
           'notification': {
@@ -186,12 +198,15 @@ class _MainScreenState extends State<MainScreen> {
         });
 
         notificationProvider.addNotification(notification);
+        
+        // Pastikan navigasi ke dashboard (index 0)
+        navigationProvider.currentIndex = 0;
 
         final notificationService = NotificationService();
         notificationService.updateNotificationBadge(notificationProvider.unreadCount);
 
         Future.delayed(Duration(milliseconds: 500), () {
-          Navigator.of(context).pushNamed('/notifications');
+          Navigator.of(context).pushNamedAndRemoveUntil('/MainScreen', (route) => false);
         });
       }
     });
@@ -205,7 +220,9 @@ class _MainScreenState extends State<MainScreen> {
     );
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint("Notifikasi foreground: ${message.notification?.title}");
+      debugPrint("🔥 Foreground message diterima di siswa!");
+      debugPrint("Title: ${message.notification?.title}");
+      debugPrint("Body: ${message.notification?.body}");
 
       final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
       final notification = NotificationModel.fromFirebaseMessage({
@@ -235,6 +252,7 @@ class _MainScreenState extends State<MainScreen> {
       debugPrint("Notifikasi diklik: ${message.data}");
 
       final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+      final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
       final notification = NotificationModel.fromFirebaseMessage({
         'messageId': message.messageId,
         'notification': {
@@ -250,7 +268,11 @@ class _MainScreenState extends State<MainScreen> {
       notificationService.updateNotificationBadge(notificationProvider.unreadCount);
       debugPrint("Badge diperbarui dengan ${notificationProvider.unreadCount} notifikasi belum dibaca (onMessageOpenedApp)");
 
-      Navigator.of(context).pushNamed('/notifications');
+      // Mengatur indeks navigasi ke tab dashboard (indeks 0)
+      navigationProvider.currentIndex = 0;
+      
+      // Navigasi ke MainScreen yang memiliki app bar dan bottom navbar dengan dashboard aktif
+      Navigator.of(context).pushNamedAndRemoveUntil('/MainScreen', (route) => false);
     });
   }
 
@@ -294,6 +316,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final navProvider = Provider.of<NavigationProvider>(context);
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
 
     final List<Widget> pages = [
       DashboardScreen(),
@@ -312,6 +335,17 @@ class _MainScreenState extends State<MainScreen> {
           CustomWidgets.MainBottomNavBar(
             currentIndex: navProvider.currentIndex,
             onTap: (index) {
+              // Jika tab notifikasi dipilih, tandai semua notifikasi sebagai dibaca
+              if (index == 4) {
+                // Perbarui badge notifikasi
+                final notificationService = NotificationService();
+                notificationService.updateNotificationBadge(0);
+                
+                // Jika ada notifikasi yang belum dibaca, tandai sebagai dibaca
+                if (notificationProvider.unreadCount > 0) {
+                }
+              }
+              
               navProvider.currentIndex = index;
               setState(() {});
             },

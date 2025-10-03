@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maestro_client_mobile/services/auth_service.dart';
+import 'dart:async';
 
 class ForgotPasswordPage extends StatefulWidget {
   @override
@@ -9,7 +10,6 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _whatsappController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   final AuthService _authService = AuthService();
@@ -21,7 +21,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+          title: Text(
           'Lupa Password',
           style: TextStyle(
             fontSize: screenWidth * 0.045,
@@ -53,13 +53,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 children: [
                   SizedBox(height: screenHeight * 0.05),
                   Icon(
-                    Icons.lock_reset,
+                    Icons.lock_outline,
                     size: screenHeight * 0.12,
                     color: Color.fromARGB(209, 0, 40, 78),
                   ),
                   SizedBox(height: screenHeight * 0.03),
                   Text(
-                    'Reset Password',
+                    'Lupa Password',
                     style: TextStyle(
                       fontSize: screenWidth * 0.06,
                       fontWeight: FontWeight.bold,
@@ -68,7 +68,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   ),
                   SizedBox(height: screenHeight * 0.02),
                   Text(
-                    'Masukkan username dan nomor WhatsApp Anda untuk menerima kode OTP',
+                    'Masukkan username Anda untuk menerima kode OTP!',
                     style: TextStyle(
                       fontSize: screenWidth * 0.04,
                       color: Colors.grey[600],
@@ -96,9 +96,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildUsernameField(),
-                          SizedBox(height: screenHeight * 0.02),
-                          _buildWhatsAppField(),
-                          SizedBox(height: screenHeight * 0.03),
+                          SizedBox(height: screenHeight * 0.05),
                           _isLoading
                               ? CircularProgressIndicator()
                               : ElevatedButton(
@@ -163,39 +161,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 
-  Widget _buildWhatsAppField() {
-    
-    return TextFormField(
-      controller: _whatsappController,
-      keyboardType: TextInputType.phone,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(15),
-      ],
-      decoration: InputDecoration(
-        labelText: "Nomor WhatsApp",
-        prefixIcon: Icon(Icons.phone_android, color: Colors.blueGrey.shade700),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Color.fromARGB(209, 0, 40, 78)),
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Nomor WhatsApp harus diisi!';
-        }
-        if (value.length < 10) {
-          return 'Nomor WhatsApp minimal 10 digit!';
-        }
-        return null;
-      },
-    );
-  }
-
   Future<void> _sendOTP() async {
     if (!_formKey.currentState!.validate()) return;
     
@@ -204,35 +169,22 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     });
 
     final username = _usernameController.text.trim();
-    final localWhatsapp = _whatsappController.text.trim();
 
-    String _normalizeToE164(String input) {
-      String digitsOnly = input.replaceAll(RegExp(r'\D+'), '');
-      if (digitsOnly.isEmpty) return '+62';
-      if (digitsOnly.startsWith('0')) {
-        digitsOnly = digitsOnly.substring(1);
-      }
-      if (digitsOnly.startsWith('62')) {
-        return '+$digitsOnly';
-      }
-      return '+62$digitsOnly';
-    }
-
-    final fullWhatsapp = _normalizeToE164(localWhatsapp);
-
-    final success = await _authService.sendOtp(
+    final result = await _authService.sendOtp(
       username: username,
-      whatsappNumber: fullWhatsapp,
     );
 
     setState(() {
       _isLoading = false;
     });
 
-    if (success) {
+    if (result['success'] == true) {
+      // Menggunakan nilai default untuk otpId jika tidak ada dalam respons
+      final otpId = result['otp_id'] ?? 'default_otp_id';
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Kode OTP telah dikirim ke $fullWhatsapp'),
+          content: Text(result['message'] ?? 'Kode OTP telah dikirim'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),
@@ -243,14 +195,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         MaterialPageRoute(
           builder: (context) => OTPVerificationPage(
             username: username,
-            whatsappNumber: fullWhatsapp,
+            otpId: otpId,
           ),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengirim OTP. Periksa data Anda dan coba lagi.'),
+          content: Text(result['message'] ?? 'Gagal mengirim kode OTP'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 3),
         ),
@@ -262,24 +214,35 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 // OTP Verification Page
 class OTPVerificationPage extends StatefulWidget {
   final String username;
-  final String whatsappNumber;
+  final String otpId;
 
-  const OTPVerificationPage({Key? key, required this.username, required this.whatsappNumber}) : super(key: key);
+  const OTPVerificationPage({Key? key, required this.username, required this.otpId}) : super(key: key);
 
   @override
   _OTPVerificationPageState createState() => _OTPVerificationPageState();
 }
 
 class _OTPVerificationPageState extends State<OTPVerificationPage> {
-  final List<TextEditingController> _otpControllers = List.generate(4, (index) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(4, (index) => FocusNode());
+  final List<TextEditingController> _otpControllers = List.generate(6, (index) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   final AuthService _authService = AuthService();
 
+  Timer? _clipboardCheckTimer;
+
+  // Variable untuk melacak apakah OTP baru sedang diminta
+  bool _isRequestingNewOTP = false;
+
   @override
   void initState() {
     super.initState();
+    // Mulai timer untuk memeriksa clipboard secara berkala
+    _clipboardCheckTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
+      if (!_isRequestingNewOTP) {
+        _checkClipboard();
+      }
+    });
   }
 
   @override
@@ -291,7 +254,46 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     for (var focusNode in _focusNodes) {
       focusNode.dispose();
     }
+    // Batalkan timer
+    _clipboardCheckTimer?.cancel();
     super.dispose();
+  }
+  
+  // Fungsi untuk membersihkan semua kotak input OTP
+  void _clearOTPFields() {
+    for (var controller in _otpControllers) {
+      controller.clear();
+    }
+    // Fokus ke kotak pertama
+    _focusNodes[0].requestFocus();
+  }
+  
+  // Fungsi untuk memeriksa clipboard dan mengisi otomatis kode OTP
+  Future<void> _checkClipboard() async {
+    try {
+      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      final clipboardText = clipboardData?.text;
+      
+      // Periksa apakah teks clipboard adalah 6 digit angka (format OTP)
+      if (clipboardText != null && 
+          clipboardText.length == 6 && 
+          RegExp(r'^\d{6}$').hasMatch(clipboardText)) {
+        
+        // Periksa apakah OTP sudah diisi (untuk menghindari pengisian berulang)
+        final currentOtp = _otpControllers.map((c) => c.text).join();
+        if (currentOtp != clipboardText) {
+          // Isi setiap kotak OTP dengan digit yang sesuai
+          for (int i = 0; i < 6; i++) {
+            _otpControllers[i].text = clipboardText[i];
+          }
+          // Hapus fokus dari semua field
+          FocusScope.of(context).unfocus();
+        }
+      }
+    } catch (e) {
+      // Tangani error jika ada
+      print('Error saat memeriksa clipboard: $e');
+    }
   }
 
   @override
@@ -348,7 +350,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                   ),
                   SizedBox(height: screenHeight * 0.02),
                   Text(
-                    'Masukkan kode OTP yang dikirim ke\n${widget.whatsappNumber}',
+                    'Masukkan kode OTP yang dikirim ke\nusername Anda',
                     style: TextStyle(
                       fontSize: screenWidth * 0.04,
                       color: Colors.grey[600],
@@ -431,9 +433,9 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: List.generate(4, (index) {
+      children: List.generate(6, (index) {
         return Container(
-          width: screenWidth * 0.15,
+          width: screenWidth * 0.12,
           height: screenHeight * 0.08,
           child: TextFormField(
             controller: _otpControllers[index],
@@ -473,7 +475,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
             onChanged: (value) {
               if (value.length == 1) {
                 // Move to next field
-                if (index < 3) {
+                if (index < 5) {
                   _focusNodes[index + 1].requestFocus();
                 } else {
                   // Last field, remove focus
@@ -520,54 +522,112 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     // Combine all OTP digits
     final enteredOTP = _otpControllers.map((controller) => controller.text).join();
 
+    // Verifikasi OTP menggunakan API
+    final result = await _authService.verifyOtp(
+      otpId: widget.otpId,
+      otp: enteredOTP,
+    );
+
     setState(() {
       _isLoading = false;
     });
 
-    // Lanjut ke halaman reset password membawa OTP dan username
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResetPasswordPage(
-          username: widget.username,
-          otp: enteredOTP,
-          whatsappNumber: widget.whatsappNumber,
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
-      ),
-    );
+      );
+
+      // Lanjut ke halaman reset password membawa OTP ID
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ResetPasswordPage(
+            username: widget.username,
+            otpId: widget.otpId,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _resendOTP() async {
-    // Clear all fields
-    for (var controller in _otpControllers) {
-      controller.clear();
+    // Tandai bahwa kita sedang meminta OTP baru
+    setState(() {
+      _isRequestingNewOTP = true;
+      _isLoading = true;
+    });
+    
+    // Bersihkan semua kotak input OTP
+    _clearOTPFields();
+    
+    // Bersihkan clipboard untuk menghindari auto-paste kode lama
+    try {
+      await Clipboard.setData(ClipboardData(text: ''));
+    } catch (e) {
+      print('Error saat membersihkan clipboard: $e');
     }
-    _focusNodes[0].requestFocus();
 
-    final success = await _authService.sendOtp(
+    final result = await _authService.sendOtp(
       username: widget.username,
-      whatsappNumber: widget.whatsappNumber,
     );
+
+    setState(() {
+      _isLoading = false;
+    });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success
-            ? 'Kode OTP baru telah dikirim ke ${widget.whatsappNumber}'
+        content: Text(result['success']
+            ? result['message']
             : 'Gagal mengirim ulang OTP. Coba lagi.'),
-        backgroundColor: success ? Colors.blue : Colors.red,
+        backgroundColor: result['success'] ? Colors.blue : Colors.red,
         duration: Duration(seconds: 3),
       ),
     );
+    
+    if (result['success']) {
+      // Reset flag _isRequestingNewOTP sebelum navigasi
+      setState(() {
+        _isRequestingNewOTP = false;
+      });
+      
+      // Update otpId jika berhasil
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OTPVerificationPage(
+            username: widget.username,
+            otpId: result['otp_id'],
+          ),
+        ),
+      );
+    } else {
+      // Reset flag jika gagal
+      setState(() {
+        _isRequestingNewOTP = false;
+      });
+    }
   }
 }
 
 // Reset Password Page
 class ResetPasswordPage extends StatefulWidget {
   final String username;
-  final String otp;
-  final String whatsappNumber;
+  final String otpId;
 
-  const ResetPasswordPage({Key? key, required this.username, required this.otp, required this.whatsappNumber}) : super(key: key);
+  const ResetPasswordPage({Key? key, required this.username, required this.otpId}) : super(key: key);
 
   @override
   _ResetPasswordPageState createState() => _ResetPasswordPageState();
@@ -790,9 +850,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     });
 
     final newPassword = _newPasswordController.text.trim();
-    final success = await _authService.resetPasswordWithOtp(
-      otp: widget.otp,
-      username: widget.username,
+    final result = await _authService.resetPasswordWithOtp(
+      otpId: widget.otpId,
       newPassword: newPassword,
     );
 
@@ -800,10 +859,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       _isLoading = false;
     });
 
-    if (success) {
+    if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Password berhasil direset! Silakan login dengan password baru.'),
+          content: Text(result['message']),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),
@@ -812,7 +871,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mereset password. Periksa OTP/username dan coba lagi.'),
+          content: Text(result['message']),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 3),
         ),
