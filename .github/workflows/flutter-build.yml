@@ -11,52 +11,28 @@ on:
 
 jobs:
   build_android:
-    name: Build Android APK
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Remove old Flutter
+        run: rm -rf $HOME/flutter
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "stable"
+          flutter-version: "3.27.0"   # atau pakai channel: master
+
+      - run: flutter --version
+      - run: dart --version
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build release APK
+      - name: Build APK
         run: flutter build apk --release
 
-      - name: Upload Android artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
-
-  build_ios:
-    name: Build iOS (No Code Sign)
-    runs-on: macos-latest
-    needs: build_android  # supaya nunggu build Android selesai
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "stable"
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build iOS (No Code Sign)
-        run: flutter build ios --release --no-codesign
-
-      - name: Upload iOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build
-          path: build/ios/iphoneos/
