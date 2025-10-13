@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/theme_provider.dart';
 import 'package:maestro_client_mobile/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:maestro_client_mobile/providers/student_provider.dart';
+import 'package:maestro_client_mobile/services/api_service.dart';
+import 'dart:convert';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -12,102 +15,128 @@ class ScheduleScreen extends StatefulWidget {
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
-  // Simulasi data siswa dan jadwalnya
-  final List<Map<String, dynamic>> _students = [
-    {
-      'id': 's1',
-      'name': 'Arya',
-      'schedules': [
-        {
-          'time': '09:00 - 10:00',
-          'date': 'Hari Ini',
-          'class': 'Private 1',
-          'instructor': 'Coach Santi',
-          'location': 'Kolam Renang Bandung',
-          'status': 'confirmed',
-          'attendance': 'hadir',
-        },
-        {
-          'time': 'Selasa, 10:00 - 11:00',
-          'date': 'Minggu Ini',
-          'class': 'Baby Swim & Spa',
-          'instructor': 'Coach Acel',
-          'location': 'Kolam Renang Cikarang',
-          'status': 'confirmed',
-          'attendance': 'absen',
-        },
-      ],
-    },
-    {
-      'id': 's2',
-      'name': 'Dewi',
-      'schedules': [
-        {
-          'time': '15:00 - 16:00',
-          'date': 'Hari Ini',
-          'class': 'Group Class',
-          'instructor': 'Coach Lia',
-          'location': 'Kolam Renang Jakarta',
-          'status': 'pending',
-          'attendance': 'hadir',
-        },
-        {
-          'time': 'Kamis, 14:00 - 15:00',
-          'date': 'Minggu Ini',
-          'class': 'Private 2',
-          'instructor': 'Coach Santi',
-          'location': 'Kolam Renang Bogor',
-          'status': 'confirmed',
-          'attendance': 'hadir',
-        },
-        {
-          'time': 'Sabtu, 16:00 - 17:00',
-          'date': 'Minggu Ini',
-          'class': 'Group Class',
-          'instructor': 'Coach Lia',
-          'location': 'Kolam Renang Tangerang',
-          'status': 'pending',
-          'attendance': 'absen',
-        },
-      ],
-    },
-  ];
+  final ApiClient _apiClient = ApiClient();
 
   String? _focusedStudentId; // null = fokus ke semua
 
-  List<Map<String, String>> _collectSchedulesByDate(String date) {
-    // Kumpulkan jadwal dari siswa yang dipilih atau semua siswa jika tidak ada yang dipilih
-    final List<Map<String, String>> result = [];
-    for (final student in _students) {
-      // Filter berdasarkan siswa yang dipilih, jika ada
-      if (_focusedStudentId == null || student['id'] == _focusedStudentId) {
-        for (final item in (student['schedules'] as List)) {
-          if (item['date'] == date) {
-            result.add({
-              'studentId': student['id'],
-              'studentName': student['name'],
-              'time': item['time'],
-              'class': item['class'],
-              'instructor': item['instructor'],
-              'location': item['location'],
-              'status': item['status'],
-              'attendance': item['attendance'],
-            });
-          }
+  List<Map<String, dynamic>> _todaySchedules = [];
+  List<Map<String, dynamic>> _weekSchedules = [];
+
+  bool _isLoadingToday = false;
+  bool _isLoadingWeek = false;
+
+  String? _errorToday;
+  String? _errorWeek;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+        if (studentProvider.students.isEmpty) {
+          await studentProvider.fetchStudents();
         }
+      } catch (_) {}
+      await _fetchTodaySchedules();
+      await _fetchWeekSchedules();
+    });
+  }
+
+  Future<void> _fetchTodaySchedules() async {
+    setState(() {
+      _isLoadingToday = true;
+      _errorToday = null;
+    });
+    try {
+      final response = await _apiClient.get('siswa/schedules/today/');
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body) as Map<String, dynamic>;
+        final List<dynamic> data = decoded['data'] ?? [];
+        setState(() {
+          _todaySchedules = List<Map<String, dynamic>>.from(data);
+        });
+      } else {
+        setState(() {
+          _errorToday = 'Gagal memuat jadwal hari ini (${response.statusCode})';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorToday = 'Terjadi kesalahan: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingToday = false;
+        });
       }
     }
-    return result;
   }
+
+  Future<void> _fetchWeekSchedules() async {
+    setState(() {
+      _isLoadingWeek = true;
+      _errorWeek = null;
+    });
+    try {
+      final response = await _apiClient.get('siswa/schedules/week/');
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body) as Map<String, dynamic>;
+        final List<dynamic> data = decoded['data'] ?? [];
+        setState(() {
+          _weekSchedules = List<Map<String, dynamic>>.from(data);
+        });
+      } else {
+        setState(() {
+          _errorWeek = 'Gagal memuat jadwal minggu ini (${response.statusCode})';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorWeek = 'Terjadi kesalahan: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingWeek = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _onRefresh() async {
+    try {
+      final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+      await Future.wait([
+        studentProvider.fetchStudents(),
+        _fetchTodaySchedules(),
+        _fetchWeekSchedules(),
+      ]);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     bool isDarkMode = themeProvider.isDarkMode;
+    final studentProvider = Provider.of<StudentProvider>(context);
+    final students = studentProvider.students;
+    final sortedStudents = List.of(students);
+    sortedStudents.sort((a, b) {
+      final nameA = (a.nickname.isNotEmpty ? a.nickname : a.fullname).toLowerCase();
+      final nameB = (b.nickname.isNotEmpty ? b.nickname : b.fullname).toLowerCase();
+      return nameA.compareTo(nameB);
+    });
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF0F0F0F) : AppColors.white,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppColors.orange,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -188,12 +217,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   side: BorderSide(color: AppColors.orange),
                   shape: StadiumBorder(),
                 ),
-                ..._students.map((s) {
-                  final bool isSelected = _focusedStudentId == s['id'];
+                ...sortedStudents.map((s) {
+                  final bool isSelected = _focusedStudentId == s.studentId;
+                  final displayName = s.nickname.isNotEmpty ? s.nickname : s.fullname;
                   return ChoiceChip(
-                    label: Text(s['name'] as String),
+                    label: Text(displayName),
                     selected: isSelected,
-                    onSelected: (_) => setState(() => _focusedStudentId = s['id'] as String),
+                    onSelected: (_) => setState(() => _focusedStudentId = s.studentId),
                     selectedColor: AppColors.orange,
                     labelStyle: GoogleFonts.nunito(
                       color: isSelected ? AppColors.white : (isDarkMode ? AppColors.white : AppColors.navy),
@@ -211,8 +241,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             // Today's Schedule
             _buildScheduleCard(
               title: 'Hari Ini',
-              schedules: _collectSchedulesByDate('Hari Ini'),
+              schedules: _focusedStudentId == null
+                  ? _todaySchedules
+                  : _todaySchedules.where((e) => e['student_id'] == _focusedStudentId).toList(),
               isDarkMode: isDarkMode,
+              isLoading: _isLoadingToday,
+              error: _errorToday,
             ),
             
             SizedBox(height: 16),
@@ -220,8 +254,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             // This Week's Schedule
             _buildScheduleCard(
               title: 'Minggu Ini',
-              schedules: _collectSchedulesByDate('Minggu Ini'),
+              schedules: _focusedStudentId == null
+                  ? _weekSchedules
+                  : _weekSchedules.where((e) => e['student_id'] == _focusedStudentId).toList(),
               isDarkMode: isDarkMode,
+              isLoading: _isLoadingWeek,
+              error: _errorWeek,
             ),
             
             SizedBox(height: 16),
@@ -229,13 +267,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildScheduleCard({
     required String title,
-    required List<Map<String, String>> schedules,
+    required List<Map<String, dynamic>> schedules,
     required bool isDarkMode,
+    bool isLoading = false,
+    String? error,
   }) {
     return Card(
       elevation: 2,
@@ -267,10 +308,41 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ],
             ),
             SizedBox(height: 16),
-            ...schedules.map((schedule) => _buildScheduleItem(
-                  schedule: schedule,
-                  isDarkMode: isDarkMode,
-                )).toList(),
+            if (isLoading)
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.orange),
+                  ),
+                ),
+              )
+            else if (error != null)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  error,
+                  style: GoogleFonts.nunito(color: Colors.red),
+                ),
+              )
+            else if (schedules.isEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Tidak ada jadwal',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.white70 : Colors.grey[700],
+                  ),
+                ),
+              )
+            else
+              ...schedules
+                  .map((schedule) => _buildScheduleItem(
+                        schedule: schedule,
+                        isDarkMode: isDarkMode,
+                      ))
+                  .toList(),
           ],
         ),
       ),
@@ -278,12 +350,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildScheduleItem({
-    required Map<String, String> schedule,
+    required Map<String, dynamic> schedule,
     required bool isDarkMode,
   }) {
-    final Color statusColor = schedule['status'] == 'confirmed' ? Colors.green : AppColors.orange;
     final Color panelColor = isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5);
-    
+
+    final String studentName = (schedule['student_fullname'] ?? '-')!.toString();
+    final String date = (schedule['schedule_date'] ?? '-')!.toString();
+    final String day = (schedule['day'] ?? '')!.toString();
+    final String timeRaw = (schedule['time'] ?? '-')!.toString();
+    final String displayTime = timeRaw.replaceAll('.', ':');
+    final String packageName = (schedule['package_name'] ?? '-')!.toString();
+    final String instructor = (schedule['trainer_nickname'] ?? '-')?.toString() ?? '-';
+    final String location = (schedule['pool_name'] ?? '-')?.toString() ?? '-';
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(12),
@@ -307,7 +387,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  schedule['studentName'] ?? '-',
+                  studentName,
                   style: GoogleFonts.nunito(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -319,15 +399,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (schedule['attendance'] == 'hadir' ? Colors.green : Colors.red).withOpacity(0.15),
+                  color: AppColors.orange.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  schedule['attendance'] == 'hadir' ? 'Hadir' : 'Absen',
+                  date,
                   style: GoogleFonts.nunito(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: schedule['attendance'] == 'hadir' ? Colors.green : Colors.red,
+                    color: AppColors.orange,
                   ),
                 ),
               ),
@@ -337,41 +417,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                schedule['time']!,
-                style: GoogleFonts.nunito(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? AppColors.white : AppColors.navy,
+              Expanded(
+                child: Text(
+                  day.isNotEmpty ? '$displayTime • $day' : displayTime,
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? AppColors.white : AppColors.navy,
+                  ),
                 ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.2),
+                  color: AppColors.navy.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  schedule['status'] == 'confirmed' ? 'Dikonfirmasi' : 'Menunggu',
+                  packageName,
                   style: GoogleFonts.nunito(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: statusColor,
+                    color: AppColors.navy,
                   ),
                 ),
               ),
             ],
           ),
           SizedBox(height: 8),
-          Text(
-            schedule['class']!,
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDarkMode ? Colors.white70 : AppColors.navy,
-            ),
-          ),
-          SizedBox(height: 4),
           Row(
             children: [
               Icon(
@@ -381,7 +454,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
               SizedBox(width: 4),
               Text(
-                schedule['instructor']!,
+                instructor,
                 style: GoogleFonts.nunito(
                   fontSize: 12,
                   color: isDarkMode ? Colors.white60 : Colors.grey[600],
@@ -400,7 +473,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  schedule['location']!,
+                  location,
                   style: GoogleFonts.nunito(
                     fontSize: 12,
                     color: isDarkMode ? Colors.white60 : Colors.grey[600],

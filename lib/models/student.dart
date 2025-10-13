@@ -9,6 +9,8 @@ class Student {
   final String dob;
   final String pob;
   final String branchName;
+  final String? joined_at;
+  final String? pool_name;
 
   Student({
     required this.studentId,
@@ -21,6 +23,8 @@ class Student {
     required this.dob,
     required this.pob,
     required this.branchName,
+    this.joined_at,
+    this.pool_name,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,8 @@ class Student {
       dob: json['dob'],
       pob: json['pob'],
       branchName: json['branch_name'],
+      joined_at: json['joined_at'],
+      pool_name: json['pool_name'],
     );
   }
 }

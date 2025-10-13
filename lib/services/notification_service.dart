@@ -105,13 +105,13 @@ class NotificationService {
 
   Future<void> _createNotificationChannel() async {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'high_importance_channel', // id
+      'maestro_notification_v2', // id - ganti channel ID agar sound baru diterapkan
       'Notifikasi Penting', // title
       description: 'Channel untuk notifikasi penting dari Maestro Swim', // description
       importance: Importance.high,
       playSound: true,
-      // Gunakan default sound system jika file notification_sound bermasalah
-      sound: RawResourceAndroidNotificationSound('notification_sound'),
+      // Gunakan custom sound macox.mp3 dari folder raw
+      sound: RawResourceAndroidNotificationSound('macox'),
       enableLights: true,
       ledColor: Color.fromARGB(255, 255, 255, 255),
     );
@@ -184,15 +184,15 @@ class NotificationService {
     
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'high_importance_channel',
+      'maestro_notification_v2',
       'Notifikasi Penting',
       channelDescription: 'Channel untuk notifikasi penting dari Maestro Swim',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
       playSound: true,
-      // Gunakan default sound system jika file notification_sound bermasalah
-      // sound: RawResourceAndroidNotificationSound('notification_sound'),
+      // Gunakan custom sound macox.mp3 dari folder raw
+      sound: RawResourceAndroidNotificationSound('macox'),
       color: Color(0xFFFFFFFF), // Warna putih
       colorized: true, // Mengaktifkan pewarnaan notifikasi
     );

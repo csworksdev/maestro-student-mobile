@@ -29,6 +29,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:maestro_client_mobile/models/notification.dart';
 import 'package:maestro_client_mobile/services/notification_service.dart';
 import 'package:maestro_client_mobile/services/logger_service.dart';
+import 'package:maestro_client_mobile/services/sound_service.dart';
 import 'package:maestro_client_mobile/theme/app_theme.dart';
 
 // Global navigator key for accessing navigator from anywhere
@@ -350,6 +351,15 @@ class _MainScreenState extends State<MainScreen> {
 
       notificationService.updateNotificationBadge(notificationProvider.unreadCount);
       debugPrint("Badge diperbarui dengan ${notificationProvider.unreadCount} notifikasi belum dibaca (foreground)");
+
+      // Putar suara notifikasi (tanpa await agar tidak blocking)
+      try {
+        SoundService().playNotificationSound().catchError((error) {
+          debugPrint("Error playing notification sound: $error");
+        });
+      } catch (e) {
+        debugPrint("Error initializing sound service: $e");
+      }
 
       notificationService.showNotification(
         fgTitle,

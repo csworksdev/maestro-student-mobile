@@ -1,25 +1,68 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:maestro_client_mobile/providers/theme_provider.dart';
-import 'package:maestro_client_mobile/models/package_models.dart' as models;
-import 'package:maestro_client_mobile/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import 'package:maestro_client_mobile/models/student_package.dart';
+import 'package:maestro_client_mobile/providers/theme_provider.dart';
+import 'package:maestro_client_mobile/services/package_service.dart';
+import 'package:maestro_client_mobile/theme/app_theme.dart';
 
 class ActivePackagesScreen extends StatefulWidget {
   const ActivePackagesScreen({super.key});
 
   @override
-  _ActivePackagesScreenState createState() => _ActivePackagesScreenState();
+  State<ActivePackagesScreen> createState() => _ActivePackagesScreenState();
 }
 
 class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
-  final List<models.Package> packages = _getMockPackages();
+  final PackageService _packageService = PackageService();
+
+  // 0 = ongoing, 1 = todo (ordered but not yet active)
+  int _filterIndex = 0;
+  bool _isLoading = false;
+  String? _errorMessage;
+  List<StudentPackage> _packages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPackages();
+  }
+
+  Future<void> _loadPackages() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      List<StudentPackage> result;
+      if (_filterIndex == 0) {
+        result = await _packageService.getOngoingPackages();
+      } else {
+        result = await _packageService.getTodoPackages();
+      }
+      setState(() {
+        _packages = result;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    bool isDarkMode = themeProvider.isDarkMode;
+    final bool isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF0F0F0F) : Colors.white,
@@ -35,19 +78,40 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            _buildHeader(isDarkMode),
-            
-            const SizedBox(height: 24),
-            
-            // Packages List
-            ...packages.map((package) => _buildPackageCard(package, isDarkMode)).toList(),
-          ],
+      body: RefreshIndicator(
+        onRefresh: _loadPackages,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(isDarkMode),
+              const SizedBox(height: 16),
+              _buildFilters(isDarkMode),
+              const SizedBox(height: 16),
+              if (_isLoading)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 24),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.navy),
+                    ),
+                  ),
+                )
+              else if (_errorMessage != null)
+                _buildErrorState(_errorMessage!, isDarkMode)
+              else if (_packages.isEmpty)
+                _buildEmptyState(isDarkMode)
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _packages.length,
+                  itemBuilder: (context, index) => _buildPackageCard(_packages[index], isDarkMode),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -102,7 +166,154 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
     );
   }
 
-  Widget _buildPackageCard(models.Package package, bool isDarkMode) {
+  Widget _buildFilters(bool isDarkMode) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildFilterChip(
+            label: 'Sedang Berjalan',
+            selected: _filterIndex == 0,
+            isDarkMode: isDarkMode,
+            onTap: () {
+              if (_filterIndex != 0) {
+                setState(() => _filterIndex = 0);
+                _loadPackages();
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildFilterChip(
+            label: 'Belum Aktif',
+            selected: _filterIndex == 1,
+            isDarkMode: isDarkMode,
+            onTap: () {
+              if (_filterIndex != 1) {
+                setState(() => _filterIndex = 1);
+                _loadPackages();
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool selected,
+    required bool isDarkMode,
+    required VoidCallback onTap,
+  }) {
+    final Color bg = selected
+        ? AppColors.navy
+        : (isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF8F9FA));
+    final Color fg = selected ? Colors.white : (isDarkMode ? Colors.white70 : AppColors.navy);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.navy.withValues(alpha: 0.2)),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: GoogleFonts.nunito(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: fg,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message, bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFF0F0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Gagal memuat data',
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.red,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: isDarkMode ? Colors.white70 : Colors.red[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: _loadPackages,
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.navy),
+            child: const Text('Coba lagi'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDarkMode) {
+    final String title = _filterIndex == 0 ? 'Tidak ada paket berjalan' : 'Tidak ada paket yang belum aktif';
+    final String subtitle = _filterIndex == 0
+        ? 'Siswa belum memiliki paket yang sedang berlangsung.'
+        : 'Tidak ditemukan paket yang telah dipesan namun belum aktif.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.navy.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : AppColors.navy,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: isDarkMode ? Colors.white70 : Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPackageCard(StudentPackage package, bool isDarkMode) {
+    final bool isTodo = _filterIndex == 1;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -121,10 +332,8 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Student Info Header
             Row(
               children: [
-                // Avatar
                 Container(
                   width: 50,
                   height: 50,
@@ -143,7 +352,7 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      package.studentName.substring(0, 1).toUpperCase(),
+                      (package.studentFullname.isNotEmpty ? package.studentFullname[0] : '?').toUpperCase(),
                       style: GoogleFonts.nunito(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -153,14 +362,12 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                
-                // Student Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        package.studentName,
+                        package.studentFullname,
                         style: GoogleFonts.nunito(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -169,50 +376,26 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      _buildStatusBadge(package.status, isDarkMode),
+                      _buildStatusBadge(
+                        isTodo ? 'Belum Aktif' : 'Sedang Berjalan',
+                        isTodo ? const Color(0xFF9E9E9E) : const Color(0xFF4CAF50),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-            
             const SizedBox(height: 16),
-            
-            // Package Info
             _buildPackageInfo(package, isDarkMode),
-            
             const SizedBox(height: 12),
-            
-            // Progress Bar
-            _buildProgressBar(package, isDarkMode),
+            _buildProgressBar(package, isDarkMode, isTodo: isTodo),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusBadge(String status, bool isDarkMode) {
-    Color badgeColor;
-    String statusText;
-    
-    switch (status.toLowerCase()) {
-      case 'active':
-        badgeColor = const Color(0xFF4CAF50);
-        statusText = 'Aktif';
-        break;
-      case 'expired':
-        badgeColor = const Color(0xFFF44336);
-        statusText = 'Kadaluarsa';
-        break;
-      case 'suspended':
-        badgeColor = const Color(0xFFFF9800);
-        statusText = 'Ditangguhkan';
-        break;
-      default:
-        badgeColor = const Color(0xFF9E9E9E);
-        statusText = status;
-    }
-    
+  Widget _buildStatusBadge(String statusText, Color badgeColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -233,24 +416,20 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
     );
   }
 
-  Widget _buildPackageInfo(models.Package package, bool isDarkMode) {
+  Widget _buildPackageInfo(StudentPackage package, bool isDarkMode) {
+    final String validUntilText = package.expireDate != null
+        ? DateFormat('dd MMM yyyy', 'id').format(package.expireDate!.toLocal())
+        : '-';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          package.name,
+          package.packageName,
           style: GoogleFonts.nunito(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: isDarkMode ? Colors.white : AppColors.navy,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          package.description,
-          style: GoogleFonts.nunito(
-            fontSize: 12,
-            color: isDarkMode ? Colors.white70 : Colors.grey[600],
           ),
         ),
         const SizedBox(height: 8),
@@ -260,7 +439,7 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
               child: _buildInfoItem(
                 icon: Icons.schedule,
                 label: 'Pertemuan Tersisa',
-                value: '${package.remainingSessions}',
+                value: '${package.meetingsRemainder}',
                 isDarkMode: isDarkMode,
               ),
             ),
@@ -269,7 +448,7 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
               child: _buildInfoItem(
                 icon: Icons.calendar_today,
                 label: 'Berlaku Sampai',
-                value: DateFormat('dd MMM yyyy', 'id').format(package.validUntil),
+                value: validUntilText,
                 isDarkMode: isDarkMode,
               ),
             ),
@@ -326,9 +505,11 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
     );
   }
 
-  Widget _buildProgressBar(models.Package package, bool isDarkMode) {
-    final progress = (package.totalSessions - package.remainingSessions) / package.totalSessions;
-    
+  Widget _buildProgressBar(StudentPackage package, bool isDarkMode, {bool isTodo = false}) {
+    final double progress = isTodo
+        ? 0.0
+        : (package.meetingsAmount > 0 ? (package.meetingsAmount - package.meetingsRemainder) / package.meetingsAmount : 0.0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -362,7 +543,9 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          '${package.totalSessions - package.remainingSessions} dari ${package.totalSessions} pertemuan digunakan',
+          isTodo
+              ? 'Belum dimulai'
+              : '${(package.meetingsAmount - package.meetingsRemainder).clamp(0, package.meetingsAmount)} dari ${package.meetingsAmount} pertemuan digunakan',
           style: GoogleFonts.nunito(
             fontSize: 10,
             color: isDarkMode ? Colors.white60 : Colors.grey[500],
@@ -371,46 +554,4 @@ class _ActivePackagesScreenState extends State<ActivePackagesScreen> {
       ],
     );
   }
-}
-
-// Mock data
-List<models.Package> _getMockPackages() {
-  return [
-    models.Package(
-      id: '1',
-      name: 'Paket Premium 12 Pertemuan',
-      description: 'Paket latihan renang premium dengan 12 pertemuan',
-      totalSessions: 12,
-      remainingSessions: 8,
-      validUntil: DateTime.now().add(const Duration(days: 45)),
-      status: 'active',
-      price: 1200000,
-      studentId: '1',
-      studentName: 'Ahmad Rizki',
-    ),
-    models.Package(
-      id: '2',
-      name: 'Paket Basic 8 Pertemuan',
-      description: 'Paket latihan renang basic dengan 8 pertemuan',
-      totalSessions: 8,
-      remainingSessions: 2,
-      validUntil: DateTime.now().add(const Duration(days: 15)),
-      status: 'active',
-      price: 800000,
-      studentId: '2',
-      studentName: 'Siti Nurhaliza',
-    ),
-    models.Package(
-      id: '3',
-      name: 'Paket Intensive 20 Pertemuan',
-      description: 'Paket latihan renang intensive dengan 20 pertemuan',
-      totalSessions: 20,
-      remainingSessions: 0,
-      validUntil: DateTime.now().subtract(const Duration(days: 5)),
-      status: 'expired',
-      price: 2000000,
-      studentId: '3',
-      studentName: 'Budi Santoso',
-    ),
-  ];
 }

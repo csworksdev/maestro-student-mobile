@@ -99,14 +99,24 @@ class AuthService {
     try {
       final refreshToken = await getRefreshToken();
       if (refreshToken == null) {
+        print('❌ Refresh token tidak ditemukan');
         return null;
       }
       
+      print('🔄 Mencoba refresh token...');
       final url = Uri.parse('https://api.maestroswim.com/auth/users/token/refresh/');
+      
+      // Tambahkan timeout untuk refresh token
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh': refreshToken}),
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          print('⏱️ Refresh token timeout');
+          throw Exception('Timeout saat refresh token');
+        },
       );
       
       if (response.statusCode == 200) {
@@ -115,14 +125,33 @@ class AuthService {
         
         // Simpan token baru
         await _storage.write(key: 'token', value: newAccessToken);
+        print('✅ Token berhasil di-refresh');
         return newAccessToken;
-      } else {
-        // Jika refresh token juga tidak valid, hapus semua token
+      } else if (response.statusCode == 401) {
+        // Refresh token expired atau tidak valid
+        print('❌ Refresh token expired atau tidak valid');
         await logout();
+        return null;
+      } else {
+        // Error lainnya, jangan langsung logout
+        print('⚠️ Error refresh token: ${response.statusCode}');
+        // Coba gunakan token lama dulu
+        final oldToken = await getToken();
+        if (oldToken != null) {
+          print('ℹ️ Menggunakan token lama sementara');
+          return oldToken;
+        }
         return null;
       }
     } catch (e) {
-      print('Error refreshing token: $e');
+      print('❌ Error refreshing token: $e');
+      // Jangan langsung logout jika error network
+      // Coba gunakan token lama
+      final oldToken = await getToken();
+      if (oldToken != null) {
+        print('ℹ️ Menggunakan token lama karena error network');
+        return oldToken;
+      }
       return null;
     }
   }

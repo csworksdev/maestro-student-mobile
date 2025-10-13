@@ -13,7 +13,15 @@ import 'package:maestro_client_mobile/pages/programrenang/group.dart';
 import 'package:maestro_client_mobile/pages/keunggulan_kolam_page.dart';
 import 'package:provider/provider.dart';
 import 'package:maestro_client_mobile/providers/student_provider.dart';
+import 'package:maestro_client_mobile/providers/navigation_provider.dart';
+import 'package:maestro_client_mobile/screens/student_detail_screen.dart';
+import 'package:maestro_client_mobile/services/package_service.dart';
+import 'package:maestro_client_mobile/models/student_package.dart';
+import 'package:maestro_client_mobile/screens/active_packages_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:maestro_client_mobile/services/api_service.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Tambahkan stateful widget agar bisa mengatur loading state pada refresh
 
@@ -26,13 +34,211 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
 
+  // Packages (ongoing) section state
+  final PackageService _packageService = PackageService();
+  bool _packagesLoading = false;
+  String? _packagesError;
+  List<StudentPackage> _ongoingPackages = [];
+  List<StudentPackage> _cachedOngoingPackages = []; // Cache untuk data terakhir
+
+  // Next class section state
+  final ApiClient _apiClient = ApiClient();
+  bool _nextClassLoading = false;
+  String? _nextClassError;
+  Map<String, dynamic>? _nextClass;
+  Map<String, dynamic>? _cachedNextClass; // Cache untuk data terakhir
+
+  Future<void> _loadOngoingPackages() async {
+    setState(() {
+      _packagesLoading = true;
+      _packagesError = null;
+    });
+    try {
+      final data = await _packageService.getOngoingPackages();
+      if (mounted) {
+        setState(() {
+          _ongoingPackages = data;
+          // Simpan ke cache jika berhasil
+          if (data.isNotEmpty) {
+            _cachedOngoingPackages = data;
+            // Simpan ke persistent cache
+            _saveCachedData();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          // Jika ada cache, gunakan cache dan tampilkan warning
+          if (_cachedOngoingPackages.isNotEmpty) {
+            _ongoingPackages = _cachedOngoingPackages;
+            _packagesError = 'Menampilkan data terakhir karena koneksi bermasalah';
+            print('⚠️ Menggunakan cached packages: ${_cachedOngoingPackages.length} items');
+          } else {
+            // Pesan error yang lebih user-friendly
+            String errorMessage = e.toString().replaceAll('Exception: ', '');
+            _packagesError = errorMessage;
+          }
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _packagesLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadNextClass() async {
+    setState(() {
+      _nextClassLoading = true;
+      _nextClassError = null;
+    });
+    try {
+      final response = await _apiClient.get('siswa/schedules/week/');
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body) as Map<String, dynamic>;
+        final List<dynamic> data = decoded['data'] ?? [];
+        
+        if (data.isNotEmpty) {
+          // Ambil jadwal pertama (yang paling terdekat)
+          final schedules = List<Map<String, dynamic>>.from(data);
+          
+          // Sort berdasarkan tanggal dan waktu untuk memastikan yang terdekat
+          schedules.sort((a, b) {
+            final dateA = a['schedule_date'] ?? '';
+            final dateB = b['schedule_date'] ?? '';
+            final timeA = a['time'] ?? '';
+            final timeB = b['time'] ?? '';
+            
+            final compareDate = dateA.compareTo(dateB);
+            if (compareDate != 0) return compareDate;
+            return timeA.compareTo(timeB);
+          });
+          
+          if (mounted) {
+            setState(() {
+              _nextClass = schedules.first;
+              // Simpan ke cache jika berhasil
+              _cachedNextClass = schedules.first;
+              // Simpan ke persistent cache
+              _saveCachedData();
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _nextClass = null;
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            // Jika ada cache, gunakan cache dan tampilkan warning
+            if (_cachedNextClass != null) {
+              _nextClass = _cachedNextClass;
+              _nextClassError = 'Menampilkan data terakhir karena koneksi bermasalah';
+              print('⚠️ Menggunakan cached next class');
+            } else {
+              _nextClassError = 'Gagal memuat jadwal. Silakan coba lagi.';
+            }
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          // Jika ada cache, gunakan cache dan tampilkan warning
+          if (_cachedNextClass != null) {
+            _nextClass = _cachedNextClass;
+            _nextClassError = 'Menampilkan data terakhir karena koneksi bermasalah';
+            print('⚠️ Menggunakan cached next class karena error');
+          } else {
+            // Pesan error yang lebih user-friendly
+            String errorMessage = e.toString().replaceAll('Exception: ', '');
+            _nextClassError = errorMessage;
+          }
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _nextClassLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    // Load cached data terlebih dahulu, kemudian fetch data baru
+    _loadCachedData();
     // Mengambil data siswa saat widget pertama kali dibuat
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<StudentProvider>(context, listen: false).fetchStudents();
+      _loadOngoingPackages();
+      _loadNextClass();
     });
+  }
+
+  // Load data dari cache (SharedPreferences)
+  Future<void> _loadCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Load cached packages
+      final cachedPackagesJson = prefs.getString('cached_ongoing_packages');
+      if (cachedPackagesJson != null) {
+        final List<dynamic> decoded = json.decode(cachedPackagesJson);
+        _cachedOngoingPackages = decoded.map((e) => StudentPackage.fromJson(e as Map<String, dynamic>)).toList();
+        if (mounted) {
+          setState(() {
+            _ongoingPackages = _cachedOngoingPackages;
+          });
+        }
+        print('✅ Loaded ${_cachedOngoingPackages.length} cached packages');
+      }
+      
+      // Load cached next class
+      final cachedNextClassJson = prefs.getString('cached_next_class');
+      if (cachedNextClassJson != null) {
+        _cachedNextClass = json.decode(cachedNextClassJson) as Map<String, dynamic>;
+        if (mounted) {
+          setState(() {
+            _nextClass = _cachedNextClass;
+          });
+        }
+        print('✅ Loaded cached next class');
+      }
+    } catch (e) {
+      print('⚠️ Error loading cached data: $e');
+    }
+  }
+
+  // Simpan data ke cache (SharedPreferences)
+  Future<void> _saveCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Save packages to cache
+      if (_cachedOngoingPackages.isNotEmpty) {
+        final packagesJson = json.encode(_cachedOngoingPackages.map((e) => e.toJson()).toList());
+        await prefs.setString('cached_ongoing_packages', packagesJson);
+        print('✅ Saved ${_cachedOngoingPackages.length} packages to cache');
+      }
+      
+      // Save next class to cache
+      if (_cachedNextClass != null) {
+        final nextClassJson = json.encode(_cachedNextClass);
+        await prefs.setString('cached_next_class', nextClassJson);
+        print('✅ Saved next class to cache');
+      }
+    } catch (e) {
+      print('⚠️ Error saving cached data: $e');
+    }
   }
 
   @override
@@ -44,13 +250,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Menambahkan try-catch untuk menangani error saat refresh
     try {
       await Provider.of<StudentProvider>(context, listen: false).fetchStudents();
+      await _loadOngoingPackages();
+      await _loadNextClass();
     } catch (e) {
       // Menampilkan snackbar jika terjadi error
       if (mounted) {
+        String errorMessage = e.toString().replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal memperbarui data: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            content: Text(errorMessage),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -171,12 +381,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         SizedBox(height: size.height * 0.02),
                         
                         // Paket Aktif & Sisa Sesi
-                        _buildActivePackageCard(size: size, isDark: isDark),
+                        _buildActivePackageCard(
+                          context: context,
+                          size: size,
+                          isDark: isDark,
+                          packagesLoading: _packagesLoading,
+                          packagesError: _packagesError,
+                          ongoingPackages: _ongoingPackages,
+                        ),
                         
                         SizedBox(height: size.height * 0.02),
                         
                         // Jadwal Terdekat (Next Class)
-                        _buildNextClassCard(size: size, isDark: isDark),
+                        _buildNextClassCard(
+                          context: context,
+                          size: size,
+                          isDark: isDark,
+                          isLoading: _nextClassLoading,
+                          error: _nextClassError,
+                          nextClass: _nextClass,
+                        ),
                         
                         SizedBox(height: size.height * 0.02),
 
@@ -1836,18 +2060,18 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
       }
 
       // Tampilkan semua siswa dalam bentuk card
+      // Buat salinan daftar siswa dan urutkan berdasarkan nama (nickname jika ada, else fullname)
+      final sortedStudents = List.of(studentProvider.students);
+      sortedStudents.sort((a, b) {
+        final nameA = a.nickname.isNotEmpty ? a.nickname : a.fullname;
+        final nameB = b.nickname.isNotEmpty ? b.nickname : b.fullname;
+        return nameA.toLowerCase().compareTo(nameB.toLowerCase());
+      });
+
       return Column(
-        children: studentProvider.students.map((student) {
-          // Format tanggal bergabung
-          String joinDate = "-";
-          try {
-            if (student.createdAt.isNotEmpty) {
-              final dateTime = DateTime.parse(student.createdAt);
-              joinDate = DateFormat('MMM yyyy', 'id_ID').format(dateTime);
-            }
-          } catch (e) {
-            joinDate = "-";
-          }
+        // Gunakan asMap supaya kita punya indeks untuk penomoran 1..n
+        children: sortedStudents.asMap().entries.map((entry) {
+          final student = entry.value;
 
           // Ambil inisial nama untuk avatar
           String initial = student.nickname.isNotEmpty 
@@ -1876,6 +2100,7 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  SizedBox(height: size.height * 0.008),
                   Row(
                     children: [
                       Container(
@@ -1896,16 +2121,33 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: GoogleFonts.nunito(
-                              fontSize: size.width * 0.06,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                        child: student.avatar != null && student.avatar!['thumbnail'] != null
+                          ? ClipOval(
+                              child: Image.network(
+                                student.avatar!['thumbnail'].toString(),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Center(
+                                  child: Text(
+                                    initial,
+                                    style: GoogleFonts.nunito(
+                                      fontSize: size.width * 0.06,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Center(
+                              child: Text(
+                                initial,
+                                style: GoogleFonts.nunito(
+                                  fontSize: size.width * 0.06,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
                       ),
                       SizedBox(width: size.width * 0.03),
                       Expanded(
@@ -1933,19 +2175,25 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Color(0xFF00B97A).withOpacity(0.1),
+                          color: student.status?.toLowerCase() == "aktif" 
+                              ? Color(0xFF00B97A).withOpacity(0.1)
+                              : Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Color(0xFF00B97A),
+                            color: student.status?.toLowerCase() == "aktif" 
+                                ? Color(0xFF00B97A)
+                                : Colors.red,
                             width: 1,
                           ),
                         ),
                         child: Text(
-                          student.isFollowup ? "Aktif" : "Tidak Aktif",
+                          student.status ?? (student.isFollowup ? "Aktif" : "Tidak Aktif"),
                           style: GoogleFonts.nunito(
                             fontSize: size.width * 0.03,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF00B97A),
+                            color: student.status?.toLowerCase() == "aktif" 
+                                ? Color(0xFF00B97A)
+                                : Colors.red,
                           ),
                         ),
                       ),
@@ -1958,7 +2206,7 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
                         child: _buildProfileInfoItem(
                           icon: Icons.calendar_today,
                           label: "Bergabung",
-                          value: "-",
+                          value: student.joined_at ?? "-",
                           size: size,
                         ),
                       ),
@@ -1966,7 +2214,7 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
                         child: _buildProfileInfoItem(
                           icon: Icons.pool,
                           label: "Lokasi Kolam",
-                          value: student.branchName ?? "-",
+                          value: student.pool_name ?? "-",
                           size: size,
                         ),
                       ),
@@ -1979,6 +2227,44 @@ Widget _buildProfileSummaryCard({required Size size, required bool isDark}) {
                         ),
                       ),
                     ],
+                  ),
+                  SizedBox(height: size.height * 0.02),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StudentDetailScreen(student: student),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.navy,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 1,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "View More",
+                            style: GoogleFonts.nunito(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward, size: 14),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -2024,7 +2310,44 @@ Widget _buildProfileInfoItem({
 }
 
 // Widget Paket Aktif & Sisa Sesi
-Widget _buildActivePackageCard({required Size size, required bool isDark}) {
+Widget _buildActivePackageCard({
+  required BuildContext context,
+  required Size size,
+  required bool isDark,
+  required bool packagesLoading,
+  required String? packagesError,
+  required List<StudentPackage> ongoingPackages,
+}) {
+  // Compute dynamic content from ongoing packages
+  final bool _loading = packagesLoading;
+  final String? _err = packagesError;
+  final first = ongoingPackages.isNotEmpty ? ongoingPackages.first : null;
+  final String titleText = _loading
+      ? 'Memuat paket...'
+      : (_err != null
+          ? 'Gagal memuat paket'
+          : (first != null
+              ? '${first.packageName} - ${first.meetingsAmount} Pertemuan'
+              : 'Tidak ada paket berjalan'));
+  final String remainderText = first != null ? '${first.meetingsRemainder} Pertemuan' : (_loading ? '-' : '0 Pertemuan');
+  final double progressVal = first == null
+      ? 0.0
+      : (first.meetingsPercentage >= 100
+          ? 1.0
+          : (first.meetingsAmount > 0
+              ? ((first.meetingsAmount - first.meetingsRemainder) / first.meetingsAmount)
+              : (first.meetingsPercentage / 100.0)));
+  final String validUntilText = first != null && first.expireDate != null
+      ? DateFormat('dd MMM yyyy', 'id').format(first.expireDate!.toLocal())
+      : '-';
+  
+  // Calculate progress percentage for display
+  final int progressPercentage = first != null
+      ? (first.meetingsAmount > 0
+          ? (((first.meetingsAmount - first.meetingsRemainder) / first.meetingsAmount) * 100).round()
+          : first.meetingsPercentage.round())
+      : 0;
+
   return Card(
     elevation: 2,
     shape: RoundedRectangleBorder(
@@ -2074,7 +2397,7 @@ Widget _buildActivePackageCard({required Size size, required bool isDark}) {
                       ),
                     ),
                     Text(
-                      "Private 1 - 12 Pertemuan",
+                      titleText,
                       style: GoogleFonts.nunito(
                         fontSize: size.width * 0.035,
                         color: Colors.grey[600],
@@ -2101,7 +2424,7 @@ Widget _buildActivePackageCard({required Size size, required bool isDark}) {
                     ),
                     SizedBox(height: size.height * 0.005),
                     Text(
-                      "8 Pertemuan",
+                      remainderText,
                       style: GoogleFonts.nunito(
                         fontSize: size.width * 0.05,
                         fontWeight: FontWeight.bold,
@@ -2124,14 +2447,14 @@ Widget _buildActivePackageCard({required Size size, required bool isDark}) {
                     ),
                     SizedBox(height: size.height * 0.005),
                     LinearProgressIndicator(
-                      value: 0.33, // 4/12 = 0.33
+                      value: progressVal,
                       backgroundColor: Colors.grey[300],
                       valueColor: AlwaysStoppedAnimation<Color>(AppColors.navy),
                       minHeight: 8,
                     ),
                     SizedBox(height: size.height * 0.005),
                     Text(
-                      "33% Selesai",
+                      "$progressPercentage% Selesai",
                       style: GoogleFonts.nunito(
                         fontSize: size.width * 0.03,
                         color: Colors.grey[600],
@@ -2143,33 +2466,49 @@ Widget _buildActivePackageCard({required Size size, required bool isDark}) {
             ],
           ),
           SizedBox(height: size.height * 0.015),
-          Container(
-            padding: EdgeInsets.all(size.width * 0.03),
-            decoration: BoxDecoration(
-              color: AppColors.navy.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.navy.withOpacity(0.1),
-                width: 1,
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ActivePackagesScreen()),
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.all(size.width * 0.03),
+              decoration: BoxDecoration(
+                color: AppColors.navy.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.navy.withOpacity(0.1),
+                  width: 1,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.schedule,
-                  color: AppColors.navy,
-                  size: size.width * 0.04,
-                ),
-                SizedBox(width: size.width * 0.02),
-                Text(
-                  "Berlaku hingga: 15 Maret 2024",
-                  style: GoogleFonts.nunito(
-                    fontSize: size.width * 0.035,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.schedule,
                     color: AppColors.navy,
-                    fontWeight: FontWeight.w500,
+                    size: size.width * 0.04,
                   ),
-                ),
-              ],
+                  SizedBox(width: size.width * 0.02),
+                  Icon(Icons.calendar_today, size: 16, color: AppColors.navy),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Berlaku hingga: $validUntilText',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: AppColors.navy,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(Icons.chevron_right, size: 18, color: AppColors.navy),
+                ],
+              ),
             ),
           ),
         ],
@@ -2179,7 +2518,14 @@ Widget _buildActivePackageCard({required Size size, required bool isDark}) {
 }
 
 // Widget Jadwal Terdekat (Next Class)
-Widget _buildNextClassCard({required Size size, required bool isDark}) {
+Widget _buildNextClassCard({
+  required BuildContext context,
+  required Size size,
+  required bool isDark,
+  bool isLoading = false,
+  String? error,
+  Map<String, dynamic>? nextClass,
+}) {
   return Card(
     elevation: 2,
     shape: RoundedRectangleBorder(
@@ -2202,124 +2548,211 @@ Widget _buildNextClassCard({required Size size, required bool isDark}) {
         ],
       ),
       padding: EdgeInsets.all(size.width * 0.04),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: isLoading
+          ? Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: size.height * 0.02),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            )
+          : error != null
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.white,
+                          size: size.width * 0.06,
+                        ),
+                        SizedBox(width: size.width * 0.03),
+                        Expanded(
+                          child: Text(
+                            "Kelas Berikutnya",
+                            style: GoogleFonts.nunito(
+                              fontSize: size.width * 0.045,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: size.height * 0.015),
+                    Text(
+                      error,
+                      style: GoogleFonts.nunito(
+                        fontSize: size.width * 0.035,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                )
+              : nextClass == null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.schedule,
+                              color: Colors.white,
+                              size: size.width * 0.06,
+                            ),
+                            SizedBox(width: size.width * 0.03),
+                            Expanded(
+                              child: Text(
+                                "Kelas Berikutnya",
+                                style: GoogleFonts.nunito(
+                                  fontSize: size.width * 0.045,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: size.height * 0.015),
+                        Text(
+                          "Tidak ada jadwal minggu ini",
+                          style: GoogleFonts.nunito(
+                            fontSize: size.width * 0.035,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _buildNextClassContent(context: context, size: size, nextClass: nextClass),
+    ),
+  );
+}
+
+Widget _buildNextClassContent({
+  required BuildContext context,
+  required Size size,
+  required Map<String, dynamic> nextClass,
+}) {
+  // Parse data dari API
+  final String packageName = (nextClass['package_name'] ?? '-').toString();
+  final String trainerName = (nextClass['trainer_nickname'] ?? '-').toString();
+  final String scheduleDate = (nextClass['schedule_date'] ?? '-').toString();
+  final String timeRaw = (nextClass['time'] ?? '-').toString();
+  final String displayTime = timeRaw.replaceAll('.', ':');
+  
+  // Format tanggal untuk tampilan yang lebih baik
+  String formattedDate = scheduleDate;
+  try {
+    final date = DateTime.parse(scheduleDate);
+    // Format: Senin, 5 Feb 2024
+    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    
+    final dayName = dayNames[date.weekday - 1];
+    final monthName = monthNames[date.month - 1];
+    
+    formattedDate = '$dayName, ${date.day} $monthName ${date.year}';
+  } catch (e) {
+    // Jika parsing gagal, gunakan format asli
+    formattedDate = scheduleDate;
+  }
+  
+  // Hitung sisa waktu
+  String timeRemaining = _calculateTimeRemaining(scheduleDate, timeRaw);
+  
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.schedule,
-                  color: Colors.white,
-                  size: size.width * 0.06,
-                ),
-              ),
-              SizedBox(width: size.width * 0.03),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Kelas Berikutnya",
-                      style: GoogleFonts.nunito(
-                        fontSize: size.width * 0.045,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      "Private 1 dengan Coach Santi",
-                      style: GoogleFonts.nunito(
-                        fontSize: size.width * 0.035,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: size.height * 0.02),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Tanggal",
-                      style: GoogleFonts.nunito(
-                        fontSize: size.width * 0.035,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                    SizedBox(height: size.height * 0.005),
-                    Text(
-                      "Senin, 5 Feb 2024",
-                      style: GoogleFonts.nunito(
-                        fontSize: size.width * 0.04,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Waktu",
-                      style: GoogleFonts.nunito(
-                        fontSize: size.width * 0.035,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                    SizedBox(height: size.height * 0.005),
-                    Text(
-                      "16:00 - 17:00",
-                      style: GoogleFonts.nunito(
-                        fontSize: size.width * 0.04,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: size.height * 0.015),
           Container(
-            padding: EdgeInsets.all(size.width * 0.03),
+            padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
             ),
-            child: Row(
+            child: Icon(
+              Icons.schedule,
+              color: Colors.white,
+              size: size.width * 0.06,
+            ),
+          ),
+          SizedBox(width: size.width * 0.03),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.timer,
-                  color: Colors.white,
-                  size: size.width * 0.04,
-                ),
-                SizedBox(width: size.width * 0.02),
                 Text(
-                  "Sisa waktu: 2 hari 14 jam",
+                  "Kelas Berikutnya",
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.045,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  "$packageName dengan Coach $trainerName",
                   style: GoogleFonts.nunito(
                     fontSize: size.width * 0.035,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      SizedBox(height: size.height * 0.02),
+      Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Tanggal",
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.035,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+                SizedBox(height: size.height * 0.005),
+                Text(
+                  formattedDate,
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.04,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: size.width * 0.02),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Waktu",
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.035,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+                SizedBox(height: size.height * 0.005),
+                Text(
+                  displayTime,
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.04,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ],
@@ -2327,6 +2760,97 @@ Widget _buildNextClassCard({required Size size, required bool isDark}) {
           ),
         ],
       ),
-    ),
+      SizedBox(height: size.height * 0.015),
+      InkWell(
+        onTap: () {
+          // Navigasi ke tab jadwal (index 1) menggunakan NavigationProvider
+          final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+          navigationProvider.currentIndex = 1;
+        },
+        child: Container(
+          padding: EdgeInsets.all(size.width * 0.03),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.timer,
+                color: Colors.white,
+                size: size.width * 0.04,
+              ),
+              SizedBox(width: size.width * 0.02),
+              Expanded(
+                child: Text(
+                  timeRemaining,
+                  style: GoogleFonts.nunito(
+                    fontSize: size.width * 0.035,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: size.width * 0.035,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
   );
+}
+
+String _calculateTimeRemaining(String scheduleDate, String time) {
+  try {
+    // Parse tanggal dan waktu
+    final date = DateTime.parse(scheduleDate);
+    
+    // Parse waktu (format: HH.MM.SS atau HH:MM:SS)
+    final timeParts = time.replaceAll('.', ':').split(':');
+    if (timeParts.length >= 2) {
+      final hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = int.tryParse(timeParts[1]) ?? 0;
+      
+      final scheduleDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        hour,
+        minute,
+      );
+      
+      final now = DateTime.now();
+      final difference = scheduleDateTime.difference(now);
+      
+      if (difference.isNegative) {
+        return "Jadwal sudah lewat";
+      }
+      
+      final days = difference.inDays;
+      final hours = difference.inHours % 24;
+      final minutes = difference.inMinutes % 60;
+      
+      if (days > 0) {
+        return "Sisa waktu: $days hari $hours jam";
+      } else if (hours > 0) {
+        return "Sisa waktu: $hours jam $minutes menit";
+      } else if (minutes > 0) {
+        return "Sisa waktu: $minutes menit";
+      } else {
+        return "Segera dimulai!";
+      }
+    }
+  } catch (e) {
+    // Jika parsing gagal
+  }
+  
+  return "Lihat jadwal untuk detail";
 }

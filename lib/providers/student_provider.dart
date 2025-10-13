@@ -36,7 +36,9 @@ class StudentProvider extends ChangeNotifier {
       } catch (e) {
         // Jika ini percobaan terakhir, simpan error
         if (attempt == retryCount) {
-          _error = e.toString();
+          // Bersihkan pesan error agar lebih user-friendly
+          String errorMessage = e.toString().replaceAll('Exception: ', '');
+          _error = errorMessage;
           developer.log('Error fetchStudents (final attempt): $e', name: 'StudentProvider', error: e);
         } else {
           developer.log('Error fetchStudents (attempt ${attempt+1}): $e', name: 'StudentProvider', error: e);
@@ -59,7 +61,9 @@ class StudentProvider extends ChangeNotifier {
     try {
       _selectedStudent = await _studentService.getStudentDetail(studentId);
     } catch (e) {
-      _error = e.toString();
+      // Bersihkan pesan error agar lebih user-friendly
+      String errorMessage = e.toString().replaceAll('Exception: ', '');
+      _error = errorMessage;
       developer.log('Error fetchStudentDetail: $e', name: 'StudentProvider', error: e);
     } finally {
       _isLoading = false;
@@ -88,7 +92,9 @@ class StudentProvider extends ChangeNotifier {
         _students[index] = _selectedStudent!;
       }
     } catch (e) {
-      _error = e.toString();
+      // Bersihkan pesan error agar lebih user-friendly
+      String errorMessage = e.toString().replaceAll('Exception: ', '');
+      _error = errorMessage;
     } finally {
       _isLoading = false;
       notifyListeners();

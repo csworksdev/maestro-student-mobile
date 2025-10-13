@@ -19,6 +19,10 @@ class StudentProfile {
   final bool isFollowup;
   final String? branch;
   final String? level;
+  final String? joined_at;
+  final String? pool_name;
+  final Map<String, dynamic>? avatar;
+  final String? status;
 
   StudentProfile({
     required this.studentId,
@@ -41,6 +45,10 @@ class StudentProfile {
     required this.isFollowup,
     this.branch,
     this.level,
+    this.joined_at,
+    this.pool_name,
+    this.avatar,
+    this.status,
   });
 
   factory StudentProfile.fromJson(Map<String, dynamic> json) {
@@ -65,6 +73,10 @@ class StudentProfile {
       isFollowup: json['is_followup'] ?? false,
       branch: json['branch'],
       level: json['level'],
+      joined_at: json['joined_at'],
+      pool_name: json['pool_name'],
+      avatar: json['avatar'] as Map<String, dynamic>?,
+      status: json['status'],
     );
   }
 
@@ -80,6 +92,8 @@ class StudentProfile {
       'pob': pob,
       'pendidikan': pendidikan,
       'institusi': institusi,
+      'avatar': avatar,
+      'status': status,
       'level': level,
     };
   }

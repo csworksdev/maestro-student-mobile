@@ -126,12 +126,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
         color: orangeColor,
         backgroundColor: Colors.white,
         child: notifications.isEmpty
-            ? SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                  child: _buildEmptyState(isDarkMode, navyColor, orangeColor),
-                ),
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _buildEmptyState(isDarkMode, navyColor, orangeColor),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               )
             : _buildNotificationList(
                 notifications,
@@ -145,44 +156,43 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Widget _buildEmptyState(bool isDarkMode, Color navyColor, Color orangeColor) {
-    return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 245, 245, 245),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.notifications_none_rounded,
-                size: 80,
-                color: const Color.fromARGB(255, 200, 200, 200),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Belum ada notifikasi',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: const Color.fromARGB(158, 0, 0, 0),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Anda akan menerima notifikasi di sini',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: isDarkMode ? Colors.white70 : Colors.black54,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 245, 245, 245),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.notifications_none_rounded,
+            size: 80,
+            color: const Color.fromARGB(255, 200, 200, 200),
+          ),
         ),
-      );
+        const SizedBox(height: 24),
+        Text(
+          'Belum ada notifikasi',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: const Color.fromARGB(158, 0, 0, 0),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Anda akan menerima notifikasi di sini',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: isDarkMode ? Colors.white70 : Colors.black54,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
   }
 
   Widget _buildNotificationList(List<NotificationModel> notifications, bool isDarkMode, Color navyColor, Color orangeColor, Color whiteColor) {

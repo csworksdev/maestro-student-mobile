@@ -28,7 +28,7 @@ class StudentService {
           'Non-JSON response for getStudents [${response.statusCode}]: $snippet',
           name: 'StudentService',
         );
-        throw Exception('Respons bukan JSON (status ${response.statusCode}).');
+        throw Exception('Gagal memuat data siswa. Silakan coba lagi.');
       }
 
       dynamic decoded;
@@ -37,7 +37,7 @@ class StudentService {
       } catch (e) {
         developer.log('Gagal decode JSON getStudents: ${response.body}',
             name: 'StudentService', error: e);
-        throw Exception('Format JSON tidak valid.');
+        throw Exception('Gagal memuat data siswa. Silakan coba lagi.');
       }
 
       final Map<String, dynamic> responseData =
@@ -60,12 +60,15 @@ class StudentService {
           name: 'StudentService',
           error: responseData,
         );
-        throw Exception(responseData['message'] ??
-            'Gagal mendapatkan daftar siswa (status ${response.statusCode}).');
+        throw Exception('Gagal memuat data siswa. Silakan coba lagi.');
       }
     } catch (e) {
       developer.log('Error getStudents: $e', name: 'StudentService', error: e);
-      throw Exception('Terjadi kesalahan: $e');
+      // Jika error sudah berupa Exception dengan pesan user-friendly, lempar ulang
+      if (e.toString().contains('Exception:')) {
+        rethrow;
+      }
+      throw Exception('Gagal memuat data siswa. Silakan coba lagi.');
     }
   }
 
