@@ -228,7 +228,7 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
         ),
       ),
       child: Text(
-        student.currentLevel == 'Intermediate' ? 'Beginner 1' : student.currentLevel,
+        'Total Paket!',
         style: GoogleFonts.nunito(
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -238,52 +238,8 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
     );
   }
 
-  Widget _buildBadgesRow(List<models.Badge> badges) {
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: badges.take(3).map((badge) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))).withValues(alpha: 0.3),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _getBadgeIcon(badge.icon),
-                size: 12,
-                color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))),
-              ),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  badge.name,
-                  style: GoogleFonts.nunito(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildProgressSummary(models.Student student, bool isDarkMode) {
     final totalSessions = student.sessions.length;
-    final recentSessions = student.sessions.where(
-      (session) => session.date.isAfter(DateTime.now().subtract(const Duration(days: 30)))
-    ).length;
 
     return Row(
       children: [
@@ -298,18 +254,9 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
         const SizedBox(width: 8),
         Expanded(
           child: _buildSummaryItem(
-            icon: Icons.trending_up,
-            label: '30 Hari',
-            value: recentSessions.toString(),
-            isDarkMode: isDarkMode,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildSummaryItem(
-            icon: Icons.star,
-            label: 'Badge',
-            value: student.badges.length.toString(),
+            icon: Icons.inventory_2,
+            label: 'Total Paket',
+            value: '12', // Placeholder value
             isDarkMode: isDarkMode,
           ),
         ),
@@ -359,6 +306,47 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBadgesRow(List<models.Badge> badges) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: badges.take(3).map((badge) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))).withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _getBadgeIcon(badge.icon),
+                size: 12,
+                color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))),
+              ),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  badge.name,
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

@@ -1,21 +1,26 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-import '../models/student_profile.dart';
+import 'package:maestro_client_mobile/models/student_profile.dart';
 import 'api_service.dart';
 
 class StudentService {
-  final ApiService _apiService = ApiService();
   final ApiClient _apiClient = ApiClient();
 
+  Future<Map<String, dynamic>> getTrainerProfile(String userId) async {
+    final response = await _apiClient.get('trainer/$userId/');
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      print("⚠️ Gagal load profile: ${response.statusCode}");
+      throw Exception('Gagal memuat profil. Silakan coba lagi.');
+    }
+  }
 
   // Mendapatkan daftar semua siswa
   Future<List<StudentProfile>> getStudents() async {
     try {
-      // Opsional: log header untuk debugging
-      final headers = await _apiService.getHeaders();
-      developer.log('Headers request: $headers', name: 'StudentService');
-
       // Gunakan ApiClient agar token otomatis diambil/di-refresh
       final response = await _apiClient.get('siswa/students/');
 

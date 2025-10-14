@@ -141,18 +141,9 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildStatItem(
-                  icon: Icons.emoji_events,
-                  label: 'Badge',
-                  value: widget.student.badges.length.toString(),
-                  isDarkMode: isDarkMode,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildStatItem(
-                  icon: Icons.trending_up,
-                  label: 'Progress',
-                  value: '85%',
+                  icon: Icons.inventory_2,
+                  label: 'Total Paket',
+                  value: '12', // Placeholder
                   isDarkMode: isDarkMode,
                 ),
               ),

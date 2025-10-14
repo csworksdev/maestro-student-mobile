@@ -1275,7 +1275,7 @@ Widget _buildPromoList(Size size, bool isDark) {
       'icon': Icons.location_on_rounded, // lokasi
     },
     {
-      'text': 'Fasilitias Lengkap. Air hangat, ruang tunggu nyaman, dan area ganti bersih.',
+      'text': 'Fasilitas Lengkap. Air hangat, ruang tunggu nyaman, dan area ganti bersih.',
       'icon': Icons.bathtub_rounded, // fasilitas lengkap
     },
   ];

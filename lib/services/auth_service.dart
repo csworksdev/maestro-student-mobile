@@ -1,22 +1,24 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:maestro_client_mobile/services/notification_service.dart';
-import 'package:maestro_client_mobile/services/logger_service.dart';
 
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static const String _baseUrl = "https://api.maestroswim.com/auth/users";
 
   /// Melakukan login ke API dan menyimpan token serta user ID
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      final url = Uri.parse('https://api.maestroswim.com/auth/users/login/');
+      final url = Uri.parse('$_baseUrl/login/');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -41,25 +43,7 @@ class AuthService {
         
         if (fcmToken != null) {
           // Kirim FCM token ke API setelah login berhasil
-          final tokenSent = await notificationService.sendTokenToApi(fcmToken, accessToken);
-          
-          // Log hasil pengiriman token untuk debugging
-          final loggerService = LoggerService();
-          if (tokenSent) {
-            loggerService.log(
-              'FCM Token berhasil dikirim ke server', 
-              tag: 'Auth',
-              showNotification: false, // Tidak menampilkan notifikasi di versi release
-              title: 'Token FCM Terkirim',
-            );
-          } else {
-            loggerService.log(
-              'Gagal mengirim FCM Token ke server', 
-              tag: 'Auth',
-              showNotification: false, // Tidak menampilkan notifikasi di versi release
-              title: 'Error Token FCM',
-            );
-          }
+          await notificationService.sendTokenToApi(fcmToken, accessToken);
         } else {
           // Jika token belum tersimpan, coba dapatkan token baru
           final newToken = await notificationService.getToken();
@@ -73,12 +57,25 @@ class AuthService {
           'userId': userId,
           'token': accessToken,
         };
+      } else if (response.statusCode == 401) {
+        print("⚠️ Login gagal: Username atau password salah");
+        throw Exception("Username atau password salah. Silakan coba lagi.");
       } else {
-        return {'success': false};
+        print("⚠️ Login gagal: ${response.statusCode}, body: ${response.body}");
+        throw Exception("Login gagal. Silakan coba lagi.");
       }
+    } on TimeoutException {
+      print("⏱️ Login timeout");
+      throw Exception("Koneksi internet Anda terlalu lambat. Silakan coba lagi.");
+    } on SocketException {
+      print("🌐 Login network error");
+      throw Exception("Tidak ada koneksi internet. Periksa WiFi atau data seluler Anda.");
     } catch (e) {
-      print('Error during login: $e');
-      return {'success': false};
+      print("❌ Login error: $e");
+      if (e.toString().contains('Exception:')) {
+        rethrow;
+      }
+      throw Exception("Terjadi kesalahan. Silakan coba lagi.");
     }
   }
 
@@ -104,55 +101,48 @@ class AuthService {
       }
       
       print('🔄 Mencoba refresh token...');
-      final url = Uri.parse('https://api.maestroswim.com/auth/users/token/refresh/');
+      final url = Uri.parse('https://api.maestroswim.com/api/token/refresh/');
       
-      // Tambahkan timeout untuk refresh token
+      // Tambahkan timeout untuk refresh token dengan retry
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh': refreshToken}),
-      ).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          print('⏱️ Refresh token timeout');
-          throw Exception('Timeout saat refresh token');
-        },
-      );
+      ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final newAccessToken = data['access'];
         
-        // Simpan token baru
         await _storage.write(key: 'token', value: newAccessToken);
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('last_token_refresh', DateTime.now().millisecondsSinceEpoch);
+        
         print('✅ Token berhasil di-refresh');
         return newAccessToken;
       } else if (response.statusCode == 401) {
-        // Refresh token expired atau tidak valid
-        print('❌ Refresh token expired atau tidak valid');
+        print('❌ Refresh token expired atau tidak valid - logout diperlukan');
         await logout();
         return null;
       } else {
-        // Error lainnya, jangan langsung logout
-        print('⚠️ Error refresh token: ${response.statusCode}');
-        // Coba gunakan token lama dulu
-        final oldToken = await getToken();
-        if (oldToken != null) {
-          print('ℹ️ Menggunakan token lama sementara');
-          return oldToken;
-        }
-        return null;
+        print('⚠️ Error refresh token: ${response.statusCode}, body: ${response.body}');
+        // Melempar exception agar UI bisa menampilkan pesan "Coba Lagi"
+        throw Exception('Gagal menyegarkan sesi. Silakan coba lagi.');
       }
+    } on TimeoutException {
+      print('⏱️ Refresh token timeout');
+      throw Exception('Koneksi lambat saat menyegarkan sesi. Coba lagi.');
+    } on SocketException {
+      print('🌐 Network error saat refresh token');
+      throw Exception('Tidak ada koneksi untuk menyegarkan sesi. Coba lagi.');
     } catch (e) {
-      print('❌ Error refreshing token: $e');
-      // Jangan langsung logout jika error network
-      // Coba gunakan token lama
-      final oldToken = await getToken();
-      if (oldToken != null) {
-        print('ℹ️ Menggunakan token lama karena error network');
-        return oldToken;
+      print('❌ Error saat refresh token: $e');
+      // Melempar ulang exception yang sudah informatif
+      if (e is Exception) {
+        rethrow;
       }
-      return null;
+      throw Exception('Terjadi kesalahan saat menyegarkan sesi.');
     }
   }
 

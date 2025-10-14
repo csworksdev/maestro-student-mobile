@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -29,7 +30,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:maestro_client_mobile/models/notification.dart';
 import 'package:maestro_client_mobile/services/notification_service.dart';
 import 'package:maestro_client_mobile/services/logger_service.dart';
-import 'package:maestro_client_mobile/services/sound_service.dart';
 import 'package:maestro_client_mobile/theme/app_theme.dart';
 
 // Global navigator key for accessing navigator from anywhere
@@ -38,6 +38,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 @pragma("vm:entry-point")
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  
+  debugPrint("🔔 Background message diterima: ${message.messageId}");
   
   // Pastikan title dan body tidak kosong
   String title = message.notification?.title ?? '';
@@ -86,8 +88,24 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final notificationService = NotificationService();
   await notificationService.saveNotificationToPrefs(notification);
   
-  // Tidak perlu menyimpan data notifikasi untuk navigasi di sini
-  // karena akan menyebabkan notifikasi ganda
+  // Inisialisasi notification service untuk background handler
+  await notificationService.initialize();
+  
+  // Tampilkan notifikasi lokal dengan suara (untuk background/terminated state)
+  // Ini akan memastikan suara notifikasi dimainkan bahkan ketika app tidak dibuka
+  await notificationService.showNotification(
+    title,
+    body,
+    payload: jsonEncode({
+      'title': title,
+      'body': body,
+      'data': message.data,
+    }),
+    notificationId: DateTime.now().millisecondsSinceEpoch.remainder(10000),
+    isServerNotification: true,
+  );
+  
+  debugPrint("✅ Background notification ditampilkan dengan suara");
 }
 
 void main() async {
@@ -172,13 +190,89 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
+  DateTime? _lastResumeTime;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkAndRefreshTokenOnStart();
     _initializeNotifications();
     _setupFCMToken();
+  }
+
+  Future<void> _checkAndRefreshTokenOnStart() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastAppOpen = prefs.getInt('last_app_open') ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      
+      // Simpan waktu app dibuka
+      await prefs.setInt('last_app_open', now);
+      
+      // Jika app tidak dibuka lebih dari 10 menit, refresh token
+      if (lastAppOpen > 0) {
+        final minutesSinceLastOpen = (now - lastAppOpen) / 1000 / 60;
+        if (minutesSinceLastOpen >= 10) {
+          debugPrint('🔄 App tidak dibuka selama ${minutesSinceLastOpen.toStringAsFixed(1)} menit, refresh token...');
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          await authProvider.refreshTokenIfNeeded();
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking token on start: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.resumed) {
+      // Aplikasi kembali aktif
+      final now = DateTime.now();
+      
+      // Jika aplikasi tidak dibuka lebih dari 5 menit, refresh token
+      if (_lastResumeTime != null) {
+        final difference = now.difference(_lastResumeTime!);
+        if (difference.inMinutes >= 5) {
+          debugPrint('🔄 Aplikasi tidak aktif selama ${difference.inMinutes} menit, refresh token...');
+          _refreshTokenAndData();
+        }
+      }
+      
+      _lastResumeTime = now;
+    }
+  }
+
+  Future<void> _refreshTokenAndData() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Refresh token terlebih dahulu
+      final refreshed = await authProvider.refreshTokenIfNeeded();
+      
+      if (refreshed) {
+        debugPrint('✅ Token berhasil di-refresh');
+        
+        // Refresh data di dashboard jika sedang di halaman dashboard
+        final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+        if (navigationProvider.currentIndex == 0) {
+          // Trigger refresh data di dashboard
+          final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+          await studentProvider.fetchStudents();
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error saat refresh token: $e');
+    }
   }
   
   Future<void> _setupFCMToken() async {
@@ -352,15 +446,8 @@ class _MainScreenState extends State<MainScreen> {
       notificationService.updateNotificationBadge(notificationProvider.unreadCount);
       debugPrint("Badge diperbarui dengan ${notificationProvider.unreadCount} notifikasi belum dibaca (foreground)");
 
-      // Putar suara notifikasi (tanpa await agar tidak blocking)
-      try {
-        SoundService().playNotificationSound().catchError((error) {
-          debugPrint("Error playing notification sound: $error");
-        });
-      } catch (e) {
-        debugPrint("Error initializing sound service: $e");
-      }
-
+      // Tampilkan notifikasi lokal dengan suara
+      // Suara akan dimainkan otomatis oleh notification channel (tidak perlu SoundService)
       notificationService.showNotification(
         fgTitle,
         fgBody,
@@ -370,7 +457,10 @@ class _MainScreenState extends State<MainScreen> {
           'data': message.data,
         }),
         notificationId: DateTime.now().millisecondsSinceEpoch.remainder(10000),
+        isServerNotification: true,
       );
+      
+      debugPrint("✅ Foreground notification ditampilkan dengan suara");
     });
 
     // Konfigurasi untuk notifikasi saat aplikasi di background tapi masih berjalan

@@ -127,12 +127,12 @@ ThemeData buildDarkTheme() {
       ),
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF0F0F0F),
+      backgroundColor: Color(0xFF1A1A1A),
       foregroundColor: AppColors.white,
       elevation: 0,
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: Color(0xFF1E1E1E),
+      backgroundColor: Color(0xFF1A1A1A),
       selectedItemColor: primary,
       unselectedItemColor: Colors.grey,
       type: BottomNavigationBarType.fixed,
@@ -146,5 +146,3 @@ ThemeData buildDarkTheme() {
     dividerColor: const Color(0xFF2A2A2A),
   );
 }
-
-

@@ -32,12 +32,22 @@ class NotificationService {
   bool _initialized = false;
   
   Future<void> initialize() async {
-    if (_initialized) return;
+    if (_initialized) {
+      debugPrint('NotificationService sudah diinisialisasi, skip...');
+      return;
+    }
 
     // Initialize logger
     await _logger.initialize();
     _logger.log('Initializing NotificationService', tag: 'Notification');
     
+    // Mencegah notifikasi otomatis FCM saat aplikasi di foreground
+    await _firebaseMessaging.setForegroundNotificationPresentationOptions(
+      alert: false, // false, karena kita akan menanganinya secara manual
+      badge: true,
+      sound: false, // false, karena kita akan memutar suara dari notifikasi lokal
+    );
+
     // Konfigurasi untuk Android
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/launcher_icon');
@@ -96,11 +106,32 @@ class NotificationService {
       },
     );
 
+    // Listener untuk notifikasi yang masuk saat aplikasi di foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("Foreground message received: ${message.notification?.title}");
+      
+      final notification = message.notification;
+      final android = message.notification?.android;
+
+      if (notification != null && android != null) {
+        // Tampilkan notifikasi lokal
+        showNotification(
+          notification.title ?? 'Notifikasi Baru',
+          notification.body ?? 'Anda memiliki pesan baru.',
+          payload: jsonEncode(message.data),
+        );
+      }
+    });
+
     // Buat channel notifikasi untuk Android
     await _createNotificationChannel();
 
     // Minta izin notifikasi
     await _requestPermissions();
+    
+    // Set flag initialized
+    _initialized = true;
+    debugPrint('✅ NotificationService berhasil diinisialisasi');
   }
 
   Future<void> _createNotificationChannel() async {
