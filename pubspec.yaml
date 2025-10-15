@@ -65,6 +65,7 @@ dependencies:
   gallery_saver_plus: ^3.2.9     
   rename: ^3.1.0
   audioplayers: ^6.5.1
+  flutter_background_service: ^5.1.0
 
 dev_dependencies:
   flutter_test:

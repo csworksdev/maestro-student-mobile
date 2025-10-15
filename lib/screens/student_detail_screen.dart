@@ -117,7 +117,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                           ),
                         ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [

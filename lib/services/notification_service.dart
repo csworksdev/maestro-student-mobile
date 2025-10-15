@@ -109,15 +109,25 @@ class NotificationService {
     // Listener untuk notifikasi yang masuk saat aplikasi di foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print("Foreground message received: ${message.notification?.title}");
-      
-      final notification = message.notification;
-      final android = message.notification?.android;
 
-      if (notification != null && android != null) {
-        // Tampilkan notifikasi lokal
+      final notification = message.notification;
+
+      // Jika payload FCM sudah memiliki blok notification, biarkan sistem OS yang menanganinya
+      if (notification != null) {
+        debugPrint(
+          'Skip notifikasi lokal karena payload FCM sudah menyertakan notification.',
+        );
+        return;
+      }
+
+      // Tampilkan notifikasi lokal hanya untuk pesan data (tanpa blok notification)
+      if (message.data.isNotEmpty) {
+        final title = message.data['title'] ?? 'Notifikasi Baru';
+        final body = message.data['body'] ?? 'Anda memiliki pesan baru.';
+
         showNotification(
-          notification.title ?? 'Notifikasi Baru',
-          notification.body ?? 'Anda memiliki pesan baru.',
+          title,
+          body,
           payload: jsonEncode(message.data),
         );
       }

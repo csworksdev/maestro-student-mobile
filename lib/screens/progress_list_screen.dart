@@ -190,22 +190,7 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
                   ],
                 ),
                 
-                const SizedBox(height: 12),
-                
-                // Badges Section
-                if (student.badges.isNotEmpty) ...[
-                  Text(
-                    'Pencapaian Terbaru',
-                    style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkMode ? Colors.white70 : Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  _buildBadgesRow(student.badges),
-                  const SizedBox(height: 12),
-                ],
+                const SizedBox(height: 16),
                 
                 // Progress Summary
                 _buildProgressSummary(student, isDarkMode),
@@ -221,10 +206,10 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF044366).withOpacity(0.1),
+        color: const Color(0xFFEE7D21).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF044366).withOpacity(0.3),
+          color: const Color(0xFFEE7D21).withOpacity(0.3),
         ),
       ),
       child: Text(
@@ -232,7 +217,7 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
         style: GoogleFonts.nunito(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF044366),
+          color: const Color(0xFFEE7D21),
         ),
       ),
     );
@@ -307,62 +292,6 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildBadgesRow(List<models.Badge> badges) {
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: badges.take(3).map((badge) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))).withValues(alpha: 0.3),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _getBadgeIcon(badge.icon),
-                size: 12,
-                color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))),
-              ),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  badge.name,
-                  style: GoogleFonts.nunito(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color(int.parse(badge.color.replaceFirst('#', '0xFF'))),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  IconData _getBadgeIcon(String iconName) {
-    switch (iconName) {
-      case 'speed':
-        return Icons.speed;
-      case 'endurance':
-        return Icons.timer;
-      case 'technique':
-        return Icons.sports;
-      case 'consistency':
-        return Icons.local_fire_department;
-      default:
-        return Icons.emoji_events;
-    }
   }
 }
 

@@ -31,6 +31,7 @@ import 'package:maestro_client_mobile/models/notification.dart';
 import 'package:maestro_client_mobile/services/notification_service.dart';
 import 'package:maestro_client_mobile/services/logger_service.dart';
 import 'package:maestro_client_mobile/theme/app_theme.dart';
+import 'package:maestro_client_mobile/services/background_service.dart';
 
 // Global navigator key for accessing navigator from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -40,32 +41,28 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   
   debugPrint("🔔 Background message diterima: ${message.messageId}");
+
+  final bool hasSystemNotification = message.notification != null;
   
   // Pastikan title dan body tidak kosong
-  String title = message.notification?.title ?? '';
-  String body = message.notification?.body ?? '';
+  String title = message.notification?.title ?? message.data['title'] ?? '';
+  String body = message.notification?.body ?? message.data['body'] ?? '';
   
-  // Jika title masih kosong, coba cari di data
-  if (title.isEmpty && message.data.isNotEmpty) {
-    title = message.data['title'] ?? '';
-    body = body.isEmpty ? (message.data['body'] ?? '') : body;
-    
-    // Cek jika ada struktur notification di dalam data
-    if (title.isEmpty && message.data['notification'] != null) {
-      var notif = message.data['notification'];
-      // Coba parse jika notif adalah string JSON
-      if (notif is String) {
-        try {
-          var notifMap = jsonDecode(notif);
-          title = notifMap['title'] ?? '';
-          body = body.isEmpty ? (notifMap['body'] ?? '') : body;
-        } catch (e) {
-          // Error handling tanpa log
-        }
-      } else if (notif is Map) {
-        title = notif['title'] ?? '';
-        body = body.isEmpty ? (notif['body'] ?? '') : body;
+  // Cek jika ada struktur notification di dalam data
+  if (message.data['notification'] != null) {
+    var notif = message.data['notification'];
+    // Coba parse jika notif adalah string JSON
+    if (notif is String) {
+      try {
+        var notifMap = jsonDecode(notif);
+        title = title.isEmpty ? (notifMap['title'] ?? '') : title;
+        body = body.isEmpty ? (notifMap['body'] ?? '') : body;
+      } catch (e) {
+        // Error handling tanpa log
       }
+    } else if (notif is Map) {
+      title = title.isEmpty ? (notif['title'] ?? '') : title;
+      body = body.isEmpty ? (notif['body'] ?? '') : body;
     }
   }
   
@@ -93,19 +90,25 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   
   // Tampilkan notifikasi lokal dengan suara (untuk background/terminated state)
   // Ini akan memastikan suara notifikasi dimainkan bahkan ketika app tidak dibuka
-  await notificationService.showNotification(
-    title,
-    body,
-    payload: jsonEncode({
-      'title': title,
-      'body': body,
-      'data': message.data,
-    }),
-    notificationId: DateTime.now().millisecondsSinceEpoch.remainder(10000),
-    isServerNotification: true,
-  );
-  
-  debugPrint("✅ Background notification ditampilkan dengan suara");
+  if (!hasSystemNotification) {
+    await notificationService.showNotification(
+      title,
+      body,
+      payload: jsonEncode({
+        'title': title,
+        'body': body,
+        'data': message.data,
+      }),
+      notificationId: DateTime.now().millisecondsSinceEpoch.remainder(10000),
+      isServerNotification: true,
+    );
+    
+    debugPrint("✅ Background notification ditampilkan dengan suara (manual)");
+  } else {
+    debugPrint(
+      'Skip background notifikasi lokal karena payload FCM sudah memiliki notification.',
+    );
+  }
 }
 
 void main() async {
@@ -116,6 +119,7 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   
   await Firebase.initializeApp();
+  await initializeService();
 
   final notificationService = NotificationService();
   await notificationService.initialize();
